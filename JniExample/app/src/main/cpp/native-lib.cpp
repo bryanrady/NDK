@@ -20,6 +20,8 @@ using namespace std;
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_bryanrady_example_MainActivity_stringFromJNI(JNIEnv *env, jobject /* this */) {
+    //instnce参数就是this，就是MainActivity对象
+
     string hello = "Hello from C++";
 
     //这是c++的调用方式
@@ -258,7 +260,7 @@ Java_com_bryanrady_example_MainActivity_testJniLocalRef(JNIEnv *env, jobject ins
     env->CallStaticVoidMethod(jlocalCls,printMsgMethodId,jmsgStr);
 
     env->DeleteLocalRef(jmsgStr);
-   // env->DeleteLocalRef(jlocalCls);
+//    env->DeleteLocalRef(jlocalCls);
 }
 
 jclass jglobalCls;
@@ -321,4 +323,126 @@ Java_com_bryanrady_example_MainActivity_testJniWeakGlobalRef(JNIEnv *env, jobjec
     //不需要的时候可以手动释放弱全局引用
     //env->DeleteWeakGlobalRef(jweakglobalCls);
 
+}
+
+/***
+ *
+ * JNI_OnLoad
+ *      在调用System.loadLibrary()函数时，内部就会去查找so中的 JNI_OnLoad 函数，如果存在此函数则自动调用。
+ *      所以so库中我们可控的第一个JNI函数就是   JNI_OnLoad(); 可以在这个函数中做一些初始化操作
+ *
+ *      JNI_OnLoad会告诉 VM 此 native 组件使用的 JNI 版本。
+ *      ​对应了Java版本，android中只支持JNI_VERSION_1_2 、JNI_VERSION_1_4、JNI_VERSION_1_6,
+ *      在JDK1.8有 JNI_VERSION_1_8。
+ *
+ *       c++
+ *      int JNI_OnLoad(JavaVM* vm, void* reserved){
+ *          // 2、4、6都可以
+ *          return JNI_VERSION_1_4;
+ *      }
+ *
+ *  动态注册
+ *  在此之前我们一直在jni中使用的 Java_PACKAGENAME_CLASSNAME_METHODNAME 来进行与java方法的匹配，这种方式我们称之为静态注册。
+ *  而动态注册则意味着方法名可以不用这么长了，在android aosp源码中就大量的使用了动态注册的形式
+ *
+ */
+
+//第一个参数是Java jvm虚拟机，第二个参数具体是什么不知道，反正JVM传递过来的也是NULL,所以不用管
+
+JavaVM *_vm;    //定义全局变量JavaVM
+
+void testDynamicJni1(){
+    LOGE("JNI 动态注册 testDynamicJni1");
+}
+
+//如果有参数传递的话，要把JNIEnv *env, jobject instance这两个参数也添加上
+jstring testDynamicJni2(JNIEnv *env, jobject instance, jint _int){
+    LOGE("JNI 动态注册 testDynamicJni2: %d",_int);
+    return env->NewStringUTF("调用成功");
+}
+
+//typedef struct {
+//    const char* name;         代表方法名
+//    const char* signature;    方法签名
+//    void*       fnPtr;        代表对应的jni方法
+//} JNINativeMethod;
+
+//定义一个不可变数组，里面存储需要动态注册的java native方法
+static const JNINativeMethod nativeMethods[] = {
+        {"testDynamicJava1","()V",(void*)testDynamicJni1},
+        {"testDynamicJava2","(I)Ljava/lang/String;",(int*)testDynamicJni2}
+};
+//需要动态注册native方法的类名
+static const char* className = "com/bryanrady/example/MainActivity";
+
+int JNI_OnLoad(JavaVM* vm, void* reserved){
+    //将JavaVM使用全局变量_vm保存起来
+    _vm = vm;
+
+    JNIEnv *env = NULL ;
+    //可以通过vm来获得JNIEnv对象
+    int r = vm->GetEnv((void**)&env,JNI_VERSION_1_6);
+    // 小于0 失败 ，等于0 成功
+    if (r != JNI_OK){
+        return -1;
+    }
+    //获得要动态注册的类的实例
+    jclass jcls = env->FindClass(className);
+    //进行注册,第3个参数是要注册方法数组的大小
+    env->RegisterNatives(jcls, nativeMethods, sizeof(nativeMethods)/ sizeof(JNINativeMethod));
+
+    //这里返回1.2、1.4、1.6都没有太大的影响
+    return JNI_VERSION_1_6;
+}
+
+/**
+ *  native线程调用Java
+ *      native调用java需要使用JNIEnv这个结构体，而JNIEnv是由Jvm传入与线程相关的变量。
+ *      但是可以通过JavaVM的AttachCurrentThread方法来获取到当前线程中的JNIEnv指针。
+ */
+
+struct Context{
+    jobject instance;
+    JNIEnv *env;
+};
+
+void* testThread(void *args){
+
+//    Context *context = static_cast<Context*>(args);
+//    //这里就报错了,因为JNIEnv不能跨线程使用，传进来的这个JNIEnv是主线程中的，不能使用在子线程中
+//    jclass jcls = context->env->GetObjectClass(context->instance);
+//    jmethodID updateUIMethodId = context->env->GetMethodID(jcls,"updateUI","()V");
+//    context->env->CallVoidMethod(context->instance,updateUIMethodId);
+//    context->env->DeleteLocalRef(jcls);
+
+    //把当前native线程附加到java 虚拟机中
+    JNIEnv *env;
+    jint r = _vm->AttachCurrentThread(&env,0);
+    if (r != JNI_OK){
+        return 0;
+    }
+    Context *context = static_cast<Context*>(args);
+    jclass jcls = env->GetObjectClass(context->instance);
+    jmethodID updateUIMethodId = env->GetMethodID(jcls,"updateUI","()V");
+    env->CallVoidMethod(context->instance,updateUIMethodId);
+
+    env->DeleteGlobalRef(context->instance);
+    delete(context);
+    env->DeleteLocalRef(jcls);
+
+    //附加之后要记得分离
+    _vm->DetachCurrentThread();
+
+    return 0;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_bryanrady_example_MainActivity_testNativeThread(JNIEnv *env, jobject instance) {
+    //在jni创建一个线程，然后在线程中调用java方法
+    pthread_t pid;
+    Context *context = new Context;
+    context->env = env; //这句话是错误的，不能直接将这个env传递到线程中进行使用
+    context->instance = env->NewGlobalRef(instance);    //这里弄成全局的为了让instance可以跨方法跨线程进行使用
+    pthread_create(&pid,0,testThread,context);
 }

@@ -1,9 +1,12 @@
 package com.bryanrady.example;
 
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
@@ -64,6 +67,13 @@ public class MainActivity extends AppCompatActivity {
 
         //10.测试弱全局应用
         testJniWeakGlobalRef();
+
+        //11.动态注册
+        testDynamicJava1();
+        testDynamicJava2(88);
+
+        //12.native线程调用Java
+        testNativeThread();
     }
 
     /**
@@ -122,5 +132,30 @@ public class MainActivity extends AppCompatActivity {
      */
     public native void testJniWeakGlobalRef();
 
+    /**
+     * 动态注册
+     */
+    public native void testDynamicJava1();
+    public native String testDynamicJava2(int n);
 
+    /**
+     * native线程调用Java
+     */
+    public native void testNativeThread();
+
+    /**
+     * 更新UI
+     */
+    public void updateUI(){
+        if(Looper.myLooper() == Looper.getMainLooper()){    //如果当前线程是主线程,则进行UI操作
+            Toast.makeText(this, "是主线程，更新UI", Toast.LENGTH_SHORT).show();
+        }else{
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(MainActivity.this, "跳到主线程，更新UI", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
 }
