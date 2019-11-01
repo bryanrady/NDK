@@ -2,6 +2,7 @@
 #include <string>
 using namespace std;
 #include <android/log.h>
+#include <pthread.h>
 #define  LOGE(...) __android_log_print(ANDROID_LOG_ERROR,"JNI",__VA_ARGS__);    //  __VA_ARGS__ 代表... 可变参数
 
 //  Java类型	签名
