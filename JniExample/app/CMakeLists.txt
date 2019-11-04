@@ -25,6 +25,8 @@ add_library( # Sets the name of the library.
 # you want to add. CMake verifies that the library exists before
 # completing its build.
 
+#这句话的意思是 去ndk目录下 D:\androidSdk\android\sdk\ndk-bundle\platforms\android-21\arch-arm\usr\lib ，随便一个版本
+#这些预测的目录的log.so库，然后把找到的log库绝对路径赋值给log-lib,
 find_library( # Sets the name of the path variable.
               log-lib
 
@@ -35,10 +37,11 @@ find_library( # Sets the name of the path variable.
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
 # build script, prebuilt third-party libraries, or system libraries.
-
+#然后这里把log.so的绝对路径写到 ${log-lib} 这里面，所以我们就能在native-lib中使用log.so的函数功能了;
+# ${log-lib} 也可以简写 直接写一个 log 就可以
 target_link_libraries( # Specifies the target library.
                        native-lib
 
                        # Links the target library to the log library
-                       # included in the NDK.
+                       # included in the NDK
                        ${log-lib} )
