@@ -5,6 +5,11 @@ using namespace std;
 #include <pthread.h>
 #define  LOGE(...) __android_log_print(ANDROID_LOG_ERROR,"JNI",__VA_ARGS__);    //  __VA_ARGS__ 代表... 可变参数
 
+//因为test()方法是c文件写的，并且在native-lib这个文件里没有声明，所以先进行声明
+extern "C"{
+    extern int test();
+}
+
 //  Java类型	签名
 //  boolean	    Z
 //  short	    S
@@ -21,8 +26,11 @@ using namespace std;
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_bryanrady_example_MainActivity_stringFromJNI(JNIEnv *env, jobject /* this */) {
-    //instnce参数就是this，就是MainActivity对象
 
+    //测试ndk17交叉编译的共享动态库
+    LOGE("libTest.so 里面的 test() 方法:%d",test());
+
+    //instnce参数就是this，就是MainActivity对象
     string hello = "Hello from C++";
 
     //这是c++的调用方式
