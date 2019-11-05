@@ -10,7 +10,30 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // 指定我们的 源文件 的编译 cpu架构
+        externalNativeBuild{
+            ndkBuild{
+                abiFilters "armeabi-v7a"
+            }
+        }
+
+        // 应该打包几种cpu
+        //比如： 集成了第三方库 ，第三方库中提供了 arm的 提供了 x86的
+        // 可以在此处 指定 只打包 arm ，生成出来的apk 就只会包含 arm的
+        ndk{
+            abiFilters "armeabi-v7a"
+        }
+
     }
+
+    //配置 native 的编译脚本路径
+    externalNativeBuild{
+        ndkBuild{
+            path "src/main/ndkBuild/Android.mk"
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
