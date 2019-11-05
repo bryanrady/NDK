@@ -14,7 +14,7 @@ public class MainActivity extends AppCompatActivity {
         // 6.0以上  System.loadLibrary 会自动为我们加载依赖的动态库
 
         //这句话只能加载动态库 静态库加载不了
-        //System.loadLibrary("Test");
+        System.loadLibrary("Test");
 
         //目前不知道为什么会报错,jni方法感觉是对的，没什么错误，但是提示找不到,按道理说预编译静态库的话 这样就可以了
         //java.lang.UnsatisfiedLinkError: No implementation found for void com.bryanrady.mkexample.MainActivity.nativeTest() (tried Java_com_bryanrady_mkexample_MainActivity_nativeTest
