@@ -3,6 +3,7 @@
 using namespace std;
 #include <android/log.h>
 #include <pthread.h>
+//定义宏
 #define  LOGE(...) __android_log_print(ANDROID_LOG_ERROR,"JNI",__VA_ARGS__);    //  __VA_ARGS__ 代表... 可变参数
 
 //因为test()方法是c文件写的，并且在native-lib这个文件里没有声明，所以先进行声明
