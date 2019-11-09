@@ -5,8 +5,13 @@
 #ifndef FFMPEG_AUDIOCHANNEL_H
 #define FFMPEG_AUDIOCHANNEL_H
 
-class AudioChannel{
+#include "BaseChannel.h"
 
+class AudioChannel : public BaseChannel{
+public:
+    AudioChannel(int streamId);
+
+    void decodeRender();
 };
 
 #endif //FFMPEG_AUDIOCHANNEL_H

@@ -6,17 +6,12 @@
 #include <cstring>
 #include "macro.h"
 
-extern "C"{
-#include "libavformat/avformat.h"
-#include "libavcodec/avcodec.h"
-}
-
 DNFFmpeg::DNFFmpeg(const char *data_source,JavaCallHelper *callHelper) {
     //这么写可能有问题，传进来的data_source可能被其他地方释放掉，而导致DNFFmpeg的成员dataSource指向一个
     //被释放的内存变成悬空指针
     //this->dataSource = const_cast<char *>(data_source);
      //这样做是为了防止data_source的内存被释放
-     this->dataSource = new char[strlen(data_source)];
+     this->dataSource = new char[strlen(data_source)+1];
      strcpy(this->dataSource,data_source);
      this->callHelper = callHelper;
 }
@@ -29,14 +24,14 @@ DNFFmpeg::~DNFFmpeg() {
 void* task_prepare(void *args){
     DNFFmpeg *dnffmpeg = static_cast<DNFFmpeg *>(args);
     dnffmpeg->_prepare();
-
+    DELETE(dnffmpeg);
     //记住这里一定要return
     return 0;
 }
 
 void DNFFmpeg::prepare() {
     //创建一个线程，在这个线程里面进行dataSource的解析
-    pthread_create(&pid,0,task_prepare,this);
+    pthread_create(&pid_prepare,0,task_prepare,this);
 }
 
 /**
@@ -57,7 +52,6 @@ void DNFFmpeg::_prepare() {
 
     //开始解码
     //2.打开媒体文件播放地址
-    formatContext = 0;
     //只有返回0才会成功，否则都是失败 失败原因：可能文件路径不对、没有网络等
     int ret = avformat_open_input(&formatContext,dataSource,0,0);
     if(ret != 0){
@@ -116,9 +110,9 @@ void DNFFmpeg::_prepare() {
 
         //对音频和视频进行不同的处理，但是有些处理是相同的，我们写在上面
         if(codec_type == AVMEDIA_TYPE_AUDIO){   //音频
-            audioChannel= new AudioChannel;
+            audioChannel= new AudioChannel(i);  //这里将i传进去，后面会通过这个i来判断这个流是视频包还是音频包
         }else if(codec_type == AVMEDIA_TYPE_VIDEO){ //视频
-            videoChannel = new VideoChannel;
+            videoChannel = new VideoChannel(i);
         }
     }
 
@@ -130,4 +124,47 @@ void DNFFmpeg::_prepare() {
 
     //如果还能执行到这里，说明准备工作已经做好了，可以通知java随时可以播放
     callHelper->onPrepared(THREAD_CHILD);
+}
+
+void* task_start(void *args){
+    DNFFmpeg *dnffmpeg = static_cast<DNFFmpeg *>(args);
+    dnffmpeg->_start();
+    DELETE(dnffmpeg);
+    return 0;
+}
+
+void DNFFmpeg::start() {
+    //设置正在播放
+    isPlaying = 1;
+    if(videoChannel != NULL){
+        //将队列设置为工作状态
+        videoChannel->packets.setWork(1);
+    }
+    //创建一个线程
+    pthread_create(&pid_start,0,task_start,this);
+}
+
+/**
+ * 专门用来读取媒体数据包(音视频数据包) 解码放到专门的类VideoChannel来进行操作
+ */
+void DNFFmpeg::_start() {
+    while (isPlaying){
+        AVPacket *avPacket = av_packet_alloc();
+        if (avPacket != NULL){
+            int ret = av_read_frame(formatContext,avPacket);
+            //0 if OK, < 0 on error or end of file
+            if(ret == 0){
+                //这里根据avPacket->stream_index(是一个流序号)和存进去的i来判断是音频包还是视频包
+                if(audioChannel && avPacket->stream_index == audioChannel->stream_id){
+
+                }else if(videoChannel && avPacket->stream_index == videoChannel->stream_id){
+                    videoChannel->packets.push(avPacket);
+                }
+            }else if(ret == AVERROR_EOF){   //读取完成了，但是可能还没有播放完
+
+            }else{
+
+            }
+        }
+    }
 }

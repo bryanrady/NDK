@@ -19,7 +19,6 @@ JavaCallHelper::JavaCallHelper(JavaVM *vm,JNIEnv *env,jobject instance) {
 
 JavaCallHelper::~JavaCallHelper() {
     env->DeleteGlobalRef(instance);
-
 }
 
 void JavaCallHelper::onError(int thread, int errorCode) {
@@ -28,7 +27,7 @@ void JavaCallHelper::onError(int thread, int errorCode) {
         env->CallVoidMethod(instance,onErrorMethodId,errorCode);
     }else{
         //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
-        JNIEnv *env;
+        JNIEnv *env = 0;
         //把当前native线程附加到java 虚拟机中
         jint ret = vm->AttachCurrentThread(&env,0);
         if (ret == JNI_OK){
@@ -45,7 +44,7 @@ void JavaCallHelper::onPrepared(int thread) {
         env->CallVoidMethod(instance,onPreparedMethodId);
     }else{
         //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
-        JNIEnv *env;
+        JNIEnv *env  = 0;
         //把当前native线程附加到java 虚拟机中
         jint ret = vm->AttachCurrentThread(&env,0);
         if (ret == JNI_OK){

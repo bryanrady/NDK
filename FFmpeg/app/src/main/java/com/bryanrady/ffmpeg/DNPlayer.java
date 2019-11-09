@@ -37,7 +37,7 @@ public class DNPlayer implements SurfaceHolder.Callback {
     }
 
     public void startPlay(){
-
+        native_start();
     }
 
     public void stopPlay(){
@@ -113,4 +113,9 @@ public class DNPlayer implements SurfaceHolder.Callback {
      * @param dataSource
      */
     private native void native_prepare(String dataSource);
+
+    /**
+     * 开始进行音视频的解码与播放
+     */
+    private native void native_start();
 }

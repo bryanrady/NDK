@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <string>
-#include "safe_queue.h"
+#include "safe_queue2.h"
 #include "DNFFmpeg.h"
 #include "JavaCallHelper.h"
 
@@ -20,7 +20,6 @@ int JNI_OnLoad(JavaVM* vm, void* reserved){
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_bryanrady_ffmpeg_DNPlayer_native_1prepare(JNIEnv *env, jobject instance, jstring data_source) {
-    // TODO: implement native_prepare()
     //获取要播放的视频地址
     const char *dataSource = env->GetStringUTFChars(data_source,0);
     JavaCallHelper *callHelper = new JavaCallHelper(_vm,env,instance);
@@ -28,4 +27,10 @@ Java_com_bryanrady_ffmpeg_DNPlayer_native_1prepare(JNIEnv *env, jobject instance
     dnfFmpeg->prepare();
 
     env->ReleaseStringUTFChars(data_source,dataSource);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_bryanrady_ffmpeg_DNPlayer_native_1start(JNIEnv *env, jobject instance) {
+    dnfFmpeg->start();
 }

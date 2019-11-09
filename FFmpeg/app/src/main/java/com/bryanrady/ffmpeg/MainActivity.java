@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     //    mBtnStop.setOnClickListener(this);
 
 //        rtmp测试地址（可用）
-//        香港卫视: rtmp://live.hkstv.hk.lxdns.com/live/hks1
+//        香港卫视: rtmp://live.hkstv.hk.lxdns.com/live/hks
 //
 //        香港财经 rtmp://202.69.69.180:443/webcast/bshdlive-pc
 //
@@ -67,6 +67,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Toast.makeText(MainActivity.this,"准备成功了!",Toast.LENGTH_SHORT).show();
             }
         });
+        mDnPlayer.startPlay();
     }
 
     @Override
