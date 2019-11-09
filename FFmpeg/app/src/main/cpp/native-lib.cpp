@@ -1,19 +1,31 @@
 #include <jni.h>
 #include <string>
-#include <android/log.h>
 #include "safe_queue.h"
-#define  LOGE(...) __android_log_print(ANDROID_LOG_ERROR,"JNI",__VA_ARGS__);    //  __VA_ARGS__ 代表... 可变参数
+#include "DNFFmpeg.h"
+#include "JavaCallHelper.h"
 
 extern "C"{
 #include "include/libavutil/avutil.h"
 }
 
+DNFFmpeg *dnfFmpeg = 0;
+JavaVM *_vm = 0;
+
+int JNI_OnLoad(JavaVM* vm, void* reserved){
+    _vm = vm;
+    //这里返回1.2、1.4、1.6都没有太大的影响
+    return JNI_VERSION_1_6;
+}
+
 extern "C"
-JNIEXPORT jstring JNICALL
-Java_com_bryanrady_ffmpeg_MainActivity_stringFromJNI(
-        JNIEnv *env,
-        jobject /* this */) {
-    std::string hello = "Hello from C++";
-    char *versionInfo = (char*)av_version_info();
-    return env->NewStringUTF(versionInfo);
+JNIEXPORT void JNICALL
+Java_com_bryanrady_ffmpeg_DNPlayer_native_1prepare(JNIEnv *env, jobject instance, jstring data_source) {
+    // TODO: implement native_prepare()
+    //获取要播放的视频地址
+    const char *dataSource = env->GetStringUTFChars(data_source,0);
+    JavaCallHelper *callHelper = new JavaCallHelper(_vm,env,instance);
+    dnfFmpeg = new DNFFmpeg(dataSource,callHelper);
+    dnfFmpeg->prepare();
+
+    env->ReleaseStringUTFChars(data_source,dataSource);
 }
