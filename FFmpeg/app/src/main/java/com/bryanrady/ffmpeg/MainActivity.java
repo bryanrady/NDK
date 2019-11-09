@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         mDnPlayer = new DNPlayer();
         mDnPlayer.setOnPreparedListener(this);
-        mDnPlayer.setDataSource("rtmp://live.hkstv.hk.lxdns.com/live/hks");
+        mDnPlayer.setDataSource("rtmp://202.69.69.180:443/webcast/bshdlive-pc");
         mDnPlayer.setSurfaceView(mSurfaceView);
     }
 
