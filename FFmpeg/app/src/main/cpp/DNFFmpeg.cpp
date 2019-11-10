@@ -136,8 +136,6 @@ void DNFFmpeg::start() {
     //设置正在播放
     isPlaying = 1;
     if(videoChannel != NULL){
-        //将队列设置为工作状态
-        videoChannel->packets.setWork(1);
         //调用开始解码播放
         videoChannel->decodeRender();
     }

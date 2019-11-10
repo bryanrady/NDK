@@ -7,12 +7,14 @@
 BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext){
     this->stream_id = stream_id;
     this->codecContext = codecContext;
+    packets.setReleaseCallback(BaseChannel::releaseAvPacket);
+    //packets.setReleaseCallback2(BaseChannel::releaseAvPacket2);
+    frames.setReleaseCallback(BaseChannel::releaseAVFrame);
 }
 
 BaseChannel::~BaseChannel() {
-    packets.setReleaseCallback(BaseChannel::releaseAvPacket);
-    //packets.setReleaseCallback2(BaseChannel::releaseAvPacket2);
     packets.clear();
+    frames.clear();
 }
 
 void BaseChannel::releaseAvPacket(AVPacket **packet) {
@@ -30,5 +32,12 @@ void BaseChannel::releaseAvPacket2(AVPacket *&packet) {
         //av_packet_free和av_packet_alloc()呈对应关系
         av_packet_free(&packet);
         packet = 0;
+    }
+}
+
+void BaseChannel::releaseAVFrame(AVFrame **avFrame) {
+    if(avFrame != NULL){
+        av_frame_free(avFrame);
+        *avFrame = 0;
     }
 }

@@ -4,20 +4,17 @@
 
 #include "VideoChannel.h"
 #include "macro.h"
+
 extern "C"{
 #include "libavutil/imgutils.h"
 }
 
-
 //在调用构造方法的时候 将streamId传给父类的stream_id,将avCodecContext传给父类的codecContext
 VideoChannel::VideoChannel(int stream_id,AVCodecContext *codecContext)
         : BaseChannel(stream_id, codecContext) {
-
 }
 
 VideoChannel::~VideoChannel() {
-    frames.setReleaseCallback(VideoChannel::releaseAVFrame);
-    frames.clear();
 }
 
 void VideoChannel::setRenderFrameCallback(RenderFrameCallback callback) {
@@ -39,6 +36,9 @@ void* task_render(void *args){
 void VideoChannel::decodeRender() {
     //设置为正在播放
     isPlaying = 1;
+    //将队列设置为工作状态
+    packets.setWork(1);
+    frames.setWork(1);
     //开启一个线程来进行解码
     pthread_create(&pid_decode,0,task_decode,this);
     //开启一个线程来进行播放
@@ -127,11 +127,4 @@ void VideoChannel::render(){
     }
     av_freep(&dst_data[0]);
     releaseAVFrame(&avFrame);
-}
-
-void VideoChannel::releaseAVFrame(AVFrame **avFrame) {
-    if(avFrame != NULL){
-        av_frame_free(avFrame);
-        *avFrame = 0;
-    }
 }

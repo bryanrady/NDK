@@ -24,15 +24,12 @@ public:
     void decode();
     //渲染播放
     void render();
-     //释放AVFrame
-     static void releaseAVFrame(AVFrame **avFrame);
 
      void setRenderFrameCallback(RenderFrameCallback callback);
 
 private:
     pthread_t pid_decode;
     pthread_t pid_render;
-    SafeQueue<AVFrame *> frames;    //存取经过解码后的图像
     SwsContext *swsContext = 0;
     RenderFrameCallback renderFrameCallback;
 };
