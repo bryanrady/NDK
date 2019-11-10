@@ -14,7 +14,7 @@ extern "C"{
 //音频和视频的父类  用来处理音频和视频的相同操作
 class BaseChannel{
 public:
-    BaseChannel(int stream_id);
+    BaseChannel(int stream_id,AVCodecContext *codecContext);
     //父类的析构函数一定要设置成为虚函数，否则不会执行子类的析构函数，可能造成内存泄漏
     virtual ~BaseChannel();
 
@@ -30,9 +30,9 @@ public:
     virtual void decodeRender() = 0;
 
     int stream_id;
+    AVCodecContext *codecContext;
     SafeQueue<AVPacket *> packets;
     bool isPlaying; //判断是不是播放状态
-    AVCodecContext *codecContext;
 };
 
 #endif //FFMPEG_BASECHANNEL_H

@@ -24,7 +24,6 @@ DNFFmpeg::~DNFFmpeg() {
 void* task_prepare(void *args){
     DNFFmpeg *dnffmpeg = static_cast<DNFFmpeg *>(args);
     dnffmpeg->_prepare();
-    DELETE(dnffmpeg);
     //记住这里一定要return
     return 0;
 }
@@ -110,9 +109,10 @@ void DNFFmpeg::_prepare() {
 
         //对音频和视频进行不同的处理，但是有些处理是相同的，我们写在上面
         if(codec_type == AVMEDIA_TYPE_AUDIO){   //音频
-            audioChannel= new AudioChannel(i);  //这里将i传进去，后面会通过这个i来判断这个流是视频包还是音频包
+            audioChannel= new AudioChannel(i,codecContext);  //这里将i传进去，后面会通过这个i来判断这个流是视频包还是音频包
         }else if(codec_type == AVMEDIA_TYPE_VIDEO){ //视频
-            videoChannel = new VideoChannel(i);
+            videoChannel = new VideoChannel(i,codecContext);
+            videoChannel->setRenderFrameCallback(renderFrameCallback);
         }
     }
 
@@ -129,7 +129,6 @@ void DNFFmpeg::_prepare() {
 void* task_start(void *args){
     DNFFmpeg *dnffmpeg = static_cast<DNFFmpeg *>(args);
     dnffmpeg->_start();
-    DELETE(dnffmpeg);
     return 0;
 }
 
@@ -139,6 +138,8 @@ void DNFFmpeg::start() {
     if(videoChannel != NULL){
         //将队列设置为工作状态
         videoChannel->packets.setWork(1);
+        //调用开始解码播放
+        videoChannel->decodeRender();
     }
     //创建一个线程
     pthread_create(&pid_start,0,task_start,this);
@@ -167,4 +168,8 @@ void DNFFmpeg::_start() {
             }
         }
     }
+}
+
+void DNFFmpeg::setRenderFrameCallback(RenderFrameCallback callback){
+    this->renderFrameCallback = callback;
 }

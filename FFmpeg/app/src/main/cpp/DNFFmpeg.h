@@ -23,7 +23,8 @@ public:
     void _prepare();
     void start();
     void _start();
-
+    //设置播放渲染回调
+    void setRenderFrameCallback(RenderFrameCallback callback);
 private:
     char *dataSource;
     pthread_t pid_prepare;
@@ -33,6 +34,7 @@ private:
     AudioChannel *audioChannel = 0;
     VideoChannel *videoChannel = 0;
     bool isPlaying;
+    RenderFrameCallback renderFrameCallback;
 };
 
 #endif //FFMPEG_DNFFMPEG_H

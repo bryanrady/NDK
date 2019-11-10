@@ -1,6 +1,7 @@
 package com.bryanrady.ffmpeg;
 
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
@@ -96,7 +97,8 @@ public class DNPlayer implements SurfaceHolder.Callback {
      */
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
+        //画布发生改变了，我们就要把改变的画布传给native
+        native_setSurface(holder.getSurface());
     }
 
     /**
@@ -118,4 +120,6 @@ public class DNPlayer implements SurfaceHolder.Callback {
      * 开始进行音视频的解码与播放
      */
     private native void native_start();
+
+    private native void native_setSurface(Surface surface);
 }
