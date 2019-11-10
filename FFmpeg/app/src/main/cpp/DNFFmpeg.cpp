@@ -133,11 +133,14 @@ void* task_start(void *args){
 }
 
 void DNFFmpeg::start() {
-    //设置正在播放
     isPlaying = 1;
     if(videoChannel != NULL){
-        //调用开始解码播放
-        videoChannel->decodeRender();
+        //调用视频解码播放
+        videoChannel->play();
+    }
+    if(audioChannel != NULL){
+        //调用音频解码播放
+        audioChannel->play();
     }
     //创建一个线程
     pthread_create(&pid_start,0,task_start,this);
@@ -155,7 +158,7 @@ void DNFFmpeg::_start() {
             if(ret == 0){
                 //这里根据avPacket->stream_index(是一个流序号)和存进去的i来判断是音频包还是视频包
                 if(audioChannel && avPacket->stream_index == audioChannel->stream_id){
-
+                    audioChannel->packets.push(avPacket);
                 }else if(videoChannel && avPacket->stream_index == videoChannel->stream_id){
                     videoChannel->packets.push(avPacket);
                 }

@@ -18,18 +18,18 @@ public:
     VideoChannel(int stream_id,AVCodecContext *codecContext);
     ~VideoChannel();
 
-    //解码播放入口
-    void decodeRender();
-    //解码
-    void decode();
-    //渲染播放
-    void render();
+    //视频解码播放入口
+    void play();
+    //视频解码
+    void video_decode();
+    //视频渲染播放
+    void video_render();
 
      void setRenderFrameCallback(RenderFrameCallback callback);
 
 private:
-    pthread_t pid_decode;
-    pthread_t pid_render;
+    pthread_t pid_video_decode;
+    pthread_t pid_video_render;
     SwsContext *swsContext = 0;
     RenderFrameCallback renderFrameCallback;
 };

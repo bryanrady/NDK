@@ -21,31 +21,31 @@ void VideoChannel::setRenderFrameCallback(RenderFrameCallback callback) {
     this->renderFrameCallback = callback;
 }
 
-void* task_decode(void *args){
+void* task_video_decode(void *args){
     VideoChannel *channel = static_cast<VideoChannel *>(args);
-    channel->decode();
+    channel->video_decode();
     return 0;
 }
 
-void* task_render(void *args){
+void* task_video_render(void *args){
     VideoChannel *channel = static_cast<VideoChannel *>(args);
-    channel->render();
+    channel->video_render();
     return 0;
 }
 
-void VideoChannel::decodeRender() {
+void VideoChannel::play() {
     //设置为正在播放
     isPlaying = 1;
     //将队列设置为工作状态
     packets.setWork(1);
     frames.setWork(1);
     //开启一个线程来进行解码
-    pthread_create(&pid_decode,0,task_decode,this);
+    pthread_create(&pid_video_decode,0,task_video_decode,this);
     //开启一个线程来进行播放
-    pthread_create(&pid_render,0,task_render,this);
+    pthread_create(&pid_video_render,0,task_video_render,this);
 }
 
-void VideoChannel::decode() {
+void VideoChannel::video_decode() {
     AVPacket *avPacket = 0;
     while (isPlaying){
         int ret = packets.pop(avPacket);
@@ -89,7 +89,7 @@ void VideoChannel::decode() {
 /**
  * 渲染播放 如何来播放AVFrame 将AVFrame转化成RGBA数据
  */
-void VideoChannel::render(){
+void VideoChannel::video_render(){
     swsContext = sws_getContext(
             codecContext->width,codecContext->height,codecContext->pix_fmt,
             codecContext->width,codecContext->height,AV_PIX_FMT_RGBA,

@@ -25,7 +25,7 @@ public:
     static void releaseAVFrame(AVFrame **avFrame);
 
     //用于音视频解码和播放(渲染)操作 纯虚函数 交给子类实现，相当于java的抽象方法
-    virtual void decodeRender() = 0;
+    virtual void play() = 0;
 
     int stream_id;
     AVCodecContext *codecContext;
