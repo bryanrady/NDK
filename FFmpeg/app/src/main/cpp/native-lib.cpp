@@ -23,7 +23,6 @@ int JNI_OnLoad(JavaVM* vm, void* reserved){
 
 //渲染播放 就是将RGBA数据渲染到nativewindow上
 void render(uint8_t *data,int line_size,int width,int height){
-    LOGE("回调到了播放");
     pthread_mutex_lock(&mutex);
     if(nativeWindow == NULL){
         pthread_mutex_unlock(&mutex);

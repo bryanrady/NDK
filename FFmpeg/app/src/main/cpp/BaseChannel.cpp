@@ -4,9 +4,11 @@
 
 #include "BaseChannel.h"
 
-BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext){
+BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base){
     this->stream_id = stream_id;
     this->codecContext = codecContext;
+    this->time_base = time_base;
+
     packets.setReleaseCallback(BaseChannel::releaseAvPacket);
     //packets.setReleaseCallback2(BaseChannel::releaseAvPacket2);
     frames.setReleaseCallback(BaseChannel::releaseAVFrame);

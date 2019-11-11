@@ -5,13 +5,10 @@
 #include "VideoChannel.h"
 #include "macro.h"
 
-extern "C"{
-#include "libavutil/imgutils.h"
-}
-
 //在调用构造方法的时候 将streamId传给父类的stream_id,将avCodecContext传给父类的codecContext
-VideoChannel::VideoChannel(int stream_id,AVCodecContext *codecContext)
-        : BaseChannel(stream_id, codecContext) {
+VideoChannel::VideoChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,int fps)
+        : BaseChannel(stream_id, codecContext,time_base) {
+    this->fps = fps;
 }
 
 VideoChannel::~VideoChannel() {
@@ -19,6 +16,10 @@ VideoChannel::~VideoChannel() {
 
 void VideoChannel::setRenderFrameCallback(RenderFrameCallback callback) {
     this->renderFrameCallback = callback;
+}
+
+void VideoChannel::setAudioChannel(AudioChannel *audioChannel) {
+    this->audioChannel = audioChannel;
 }
 
 void* task_video_decode(void *args){
@@ -50,6 +51,7 @@ void VideoChannel::video_decode() {
     while (isPlaying){
         int ret = packets.pop(avPacket);
         if (!isPlaying){    //我们再取包的时候播放器可能停止了，直接break（因为取包的过程是个阻塞过程）
+            releaseAvPacket(&avPacket);
             break;
         }
         if(ret == 0){   //如果没有取成功就继续来取
@@ -75,6 +77,7 @@ void VideoChannel::video_decode() {
                 //这里的AVERROR(EAGAIN)意思是:从解码器中读取的数据包太少，导致不够生成一段图像，需要更多的数据包才能生存图像
                 continue;
             }else{
+                releaseAvPacket(&avPacket);
                 break;
             }
         }
@@ -93,32 +96,70 @@ void VideoChannel::video_render(){
     swsContext = sws_getContext(
             codecContext->width,codecContext->height,codecContext->pix_fmt,
             codecContext->width,codecContext->height,AV_PIX_FMT_RGBA,
-            SWS_BILINEAR,0,0,0
-            );
+            SWS_BILINEAR,0,0,0);
     AVFrame *avFrame = 0;
     uint8_t * dst_data[4];  //指针数组
     int dst_linesize[4];
     //申请内存，要记得释放
-    av_image_alloc(
-            dst_data,dst_linesize,
-            codecContext->width,codecContext->height,AV_PIX_FMT_RGBA,1
-            );
+    av_image_alloc(dst_data,dst_linesize,codecContext->width,codecContext->height,AV_PIX_FMT_RGBA,1);
+
+    //得到每个图像画面的刷新间隔(播放间隔),所以fps越高，画面就会越流畅
+    double frame_delays = 1.0/fps;
 
     while (isPlaying){
         int ret = frames.pop(avFrame);
         if (!isPlaying){
+            releaseAVFrame(&avFrame);
             break;
         }
         if (ret == 0){
             continue;
         }
         //avFrame->linesize 每一行存放的图像字节长度
-        sws_scale(
-                swsContext,avFrame->data,
+        sws_scale(swsContext,avFrame->data,
                 avFrame->linesize,0,codecContext->height,
-                dst_data,dst_linesize
-                );
+                dst_data,dst_linesize);
+
+        //这里音视频同步以 音频作为基准
+
+        //获得当前帧avFrame画面的相对播放时间 (相对于开始播放的时间)，我们也可以通过pts来获得，但是一般在处理视频的情况不通过
+        // pts来获得，通过best_effort_timestamp来获得，这两个有什么区别？其实大部分情况下这两个值是相等的，best_effort_timestamp
+        // 比pts参考了更多的情况，比pts更加精准的来代表我们当前画面的相对播放时间
+        double video_frame_clock = avFrame->best_effort_timestamp * av_q2d(time_base);
+        //额外的间隔时间
+        double extra_delay = avFrame->repeat_pict / (2*fps);
+        // 真实需要的间隔时间
+        double delays = extra_delay + frame_delays;
+
+        if (audioChannel != NULL){
+            //如果第一个图像出来的时候，video_frame_clock可能为0，那就以正常的时间间隔来进行播放正常播放
+            if (video_frame_clock == 0) {
+                av_usleep(delays * 1000000);
+            }else{
+                //获得音频的相对播放时间 s
+                double audio_frame_clock = audioChannel->frameClock;
+                //音视频播放相差的间隔
+                double diff = video_frame_clock - audio_frame_clock;
+                if(diff > 0){
+                    //视频快了，就要让视频的这一帧数据睡得更久一点，就是更新画面慢一点
+                    LOGE("视频快了：%lf",diff);
+                    av_usleep((delays + diff) * 1000000);
+                }else if (diff < 0){
+                    //视频慢了 就要快点赶上音频
+                    LOGE("视频慢了：%lf",diff);
+                }else{
+                    //相等的话 以正常的时间间隔来进行播放正常播放
+                    LOGE("音视频播放时间间隔相等");
+                    av_usleep(delays * 1000000);
+                };
+            }
+        }else{
+            //如果没有音频的话，也要进行正常播放
+            av_usleep(delays * 1000000);
+        }
+
         releaseAVFrame(&avFrame);
+
         //通过上面的步骤，现在就转成了RGBA数据 存在了dst_data中,将转出来的数据回调出去进行播放
         //dst_data是一个指针数组，它将所有的数据都存储在第0个上面（123上面都没有数据的），所以我们直接将第0个回调出去即可，这就是为什么释放也只是释放第0个
         if(renderFrameCallback != NULL){

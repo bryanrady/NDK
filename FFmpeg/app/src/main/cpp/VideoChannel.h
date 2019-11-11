@@ -6,16 +6,19 @@
 #define FFMPEG_VIDEOCHANNEL_H
 
 #include "BaseChannel.h"
+#include "AudioChannel.h"
 
 extern "C"{
-#include "libswscale/swscale.h"
+#include <libswscale/swscale.h>
+#include <libavutil/time.h>
+#include <libavutil/imgutils.h>
 };
 
 typedef void (*RenderFrameCallback)(uint8_t *,int,int,int);
 //用来完成视频的解码和播放
 class VideoChannel : public BaseChannel{
 public:
-    VideoChannel(int stream_id,AVCodecContext *codecContext);
+    VideoChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,int fps);
     ~VideoChannel();
 
     //视频解码播放入口
@@ -27,11 +30,15 @@ public:
 
      void setRenderFrameCallback(RenderFrameCallback callback);
 
+     void setAudioChannel(AudioChannel *audioChannel);
+
 private:
     pthread_t pid_video_decode;
     pthread_t pid_video_render;
     SwsContext *swsContext = 0;
     RenderFrameCallback renderFrameCallback;
+    int fps;
+    AudioChannel *audioChannel;
 };
 
 #endif //FFMPEG_VIDEOCHANNEL_H

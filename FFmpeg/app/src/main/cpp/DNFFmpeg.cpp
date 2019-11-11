@@ -69,7 +69,7 @@ void DNFFmpeg::_prepare() {
     }
     //nb_streams 有几个流，就是有几个视频或者音频或者其他东西，可能不光只包含音视频流
     for(size_t i=0;i<formatContext->nb_streams;i++){
-        //获取视频流 这段流可能是视频也可能是音频
+        //获取媒体视频流 这段流可能是视频也可能是音频
         AVStream *avStream = formatContext->streams[i];
         //AVCodecParameters包含了解码这段流的各种信息
         AVCodecParameters *codecParameters = avStream->codecpar;
@@ -106,12 +106,19 @@ void DNFFmpeg::_prepare() {
             callHelper->onError(THREAD_CHILD,FFMPEG_OPEN_DECODER_FAIL);
             return;
         }
-
+        //帧的基本时间单位（秒）
+        AVRational time_base = avStream->time_base;
         //对音频和视频进行不同的处理，但是有些处理是相同的，我们写在上面
         if(codec_type == AVMEDIA_TYPE_AUDIO){   //音频
-            audioChannel= new AudioChannel(i,codecContext);  //这里将i传进去，后面会通过这个i来判断这个流是视频包还是音频包
+            audioChannel= new AudioChannel(i,codecContext,time_base);  //这里将i传进去，后面会通过这个i来判断这个流是视频包还是音频包
         }else if(codec_type == AVMEDIA_TYPE_VIDEO){ //视频
-            videoChannel = new VideoChannel(i,codecContext);
+            //平均帧率: 就是单位时间内需要显示多少个图像
+            AVRational avg_frame_rate = avStream->avg_frame_rate;
+            //分子除以分母，得到fps，也可以调用这个av_q2d()这个函数，内部实现也是分子/分母
+            //int fps = avg_frame_rate.num / avg_frame_rate.num;
+            int fps = av_q2d(avg_frame_rate);
+
+            videoChannel = new VideoChannel(i,codecContext,time_base,fps);
             videoChannel->setRenderFrameCallback(renderFrameCallback);
         }
     }
@@ -139,6 +146,7 @@ void DNFFmpeg::start() {
         videoChannel->play();
     }
     if(audioChannel != NULL){
+        videoChannel->setAudioChannel(audioChannel);
         //调用音频解码播放
         audioChannel->play();
     }

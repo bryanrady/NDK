@@ -5,8 +5,8 @@
 #include "AudioChannel.h"
 #include "macro.h"
 
-AudioChannel::AudioChannel(int stream_id,AVCodecContext *codecContext)
-        : BaseChannel(stream_id,codecContext) {
+AudioChannel::AudioChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base)
+        : BaseChannel(stream_id,codecContext,time_base) {
     //根据布局获取声道数
     out_channels = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     //16位数据 也就是2个字节
@@ -65,6 +65,7 @@ void AudioChannel::audio_decode() {
     while (isPlaying){
         int ret = packets.pop(avPacket);
         if (!isPlaying){    //我们再取包的时候播放器可能停止了，直接break（因为取包的过程是个阻塞过程）
+            releaseAvPacket(&avPacket);
             break;
         }
         if(ret == 0){   //如果没有取成功就继续来取
@@ -131,6 +132,11 @@ int AudioChannel::getPcm() {
     //获得多少个字节大小  ==  samples * out_samplesize * 声道数 * 2
     //获取out_channels个声道输出的16位数据
     dataSize = samples * out_16_samplesize * out_channels;
+
+    //pts  获得当前帧AVFrame 的一个相对播放时间 (相对开始播放的时间)
+    //获得音频 相对播放这一段AVFrame数据的秒数
+    frameClock = avFrame->pts * av_q2d(time_base);
+
     return dataSize;
 }
 

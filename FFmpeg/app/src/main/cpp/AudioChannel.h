@@ -15,7 +15,7 @@ extern "C"{
 
 class AudioChannel : public BaseChannel{
 public:
-    AudioChannel(int stream_id,AVCodecContext *codecContext);
+    AudioChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base);
     ~AudioChannel();
 
     //输出缓冲区
