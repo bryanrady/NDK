@@ -141,14 +141,16 @@ void* task_start(void *args){
 
 void DNFFmpeg::start() {
     isPlaying = 1;
-    if(videoChannel != NULL){
-        //调用视频解码播放
-        videoChannel->play();
-    }
     if(audioChannel != NULL){
-        videoChannel->setAudioChannel(audioChannel);
         //调用音频解码播放
         audioChannel->play();
+    }
+    if(videoChannel != NULL){
+        if(audioChannel != NULL){
+            videoChannel->setAudioChannel(audioChannel);
+        }
+        //调用视频解码播放
+        videoChannel->play();
     }
     //创建一个线程
     pthread_create(&pid_start,0,task_start,this);

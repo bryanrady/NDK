@@ -5,10 +5,46 @@
 #include "VideoChannel.h"
 #include "macro.h"
 
+/**
+ * 丢包 直到下一个关键帧 I帧出现  每次丢一组帧 I与I之间的帧
+ * @param packets
+ */
+void dropAVPacket(queue<AVPacket *> &packets) {
+    while (!packets.empty()) {
+        AVPacket *packet = packets.front();
+        //如果不属于 I 帧（关键帧） AVPacket里面的标签 flags
+        if (packet->flags != AV_PKT_FLAG_KEY) {
+            BaseChannel::releaseAvPacket(&packet);
+            packets.pop();
+        } else {
+            break;
+        }
+    }
+}
+
+/**
+ * 丢掉已经解码的图片  每次丢一张图片
+ * @param frames
+ */
+void dropAVFrame(queue<AVFrame *> &frames){
+    if (!frames.empty()) {
+        AVFrame *frame = frames.front();
+        frame->nb_samples;
+        BaseChannel::releaseAVFrame(&frame);
+        frames.pop();
+    }
+}
+
 //在调用构造方法的时候 将streamId传给父类的stream_id,将avCodecContext传给父类的codecContext
 VideoChannel::VideoChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,int fps)
         : BaseChannel(stream_id, codecContext,time_base) {
     this->fps = fps;
+
+    packets.setSyncHandle(dropAVPacket);
+
+    //设置回调 调用dropAVFrame丢包方法 这里我们来丢AVFrame包
+    //这里进行同步，达到线程安全 不用担心多线程的问题
+    frames.setSyncHandle(dropAVFrame);
 }
 
 VideoChannel::~VideoChannel() {
@@ -119,14 +155,14 @@ void VideoChannel::video_render(){
         sws_scale(swsContext,avFrame->data,
                 avFrame->linesize,0,codecContext->height,
                 dst_data,dst_linesize);
+#if 1
 
         //这里音视频同步以 音频作为基准
-
         //获得当前帧avFrame画面的相对播放时间 (相对于开始播放的时间)，我们也可以通过pts来获得，但是一般在处理视频的情况不通过
         // pts来获得，通过best_effort_timestamp来获得，这两个有什么区别？其实大部分情况下这两个值是相等的，best_effort_timestamp
         // 比pts参考了更多的情况，比pts更加精准的来代表我们当前画面的相对播放时间
         double video_frame_clock = avFrame->best_effort_timestamp * av_q2d(time_base);
-        //额外的间隔时间
+        //额外的间隔时间 repeat_pict 这个东西是当我们在进行解码操作的时候，这个图像需要延迟多久才显示，所以需要加上这个延迟
         double extra_delay = avFrame->repeat_pict / (2*fps);
         // 真实需要的间隔时间
         double delays = extra_delay + frame_delays;
@@ -141,23 +177,41 @@ void VideoChannel::video_render(){
                 //音视频播放相差的间隔
                 double diff = video_frame_clock - audio_frame_clock;
                 if(diff > 0){
-                    //视频快了，就要让视频的这一帧数据睡得更久一点，就是更新画面慢一点
+                    //视频快了 就要让视频的这一帧数据睡得更久一点，就是更新画面慢一点
                     LOGE("视频快了：%lf",diff);
                     av_usleep((delays + diff) * 1000000);
                 }else if (diff < 0){
                     //视频慢了 就要快点赶上音频
                     LOGE("视频慢了：%lf",diff);
+                    //有种情况：可能音频快了，要播放的视频包积压太多，赶不上音频了，如果这里进行音频睡眠的话，就会造成延迟越来越高，
+                    //可能直播播到了第5，但是因为休眠的话可能还在播第2个，就会有很高的延迟，所以我们就要来丢包 丢视频包
+                    //在丢包 AVPackeg包的时候，只能丢B帧跟P帧，不能丢I帧.如果丢掉了I帧，那么P帧和B帧的数据就解码不出来
+                    //但是也不是不能丢掉I帧，比如说 一个队列里面存放的 帧数据 IBBPIBPI ，如果要丢掉第一个I的话，就要把后面的BBP也丢掉，
+                    //直到找到下一次I帧，如果第一个I帧不丢的话，可以直接把后面的BBP都丢掉，这只是举个例子而已
+                    // 因为P帧要解码的话，需要参考I帧的数据，B帧在解码的时候需要参考I帧和P帧的数据，I帧保存的是完整的图像数据
+                    //所以I帧的数据两最大，P帧第2，B帧第3
+                    //但是在解码的时间上 解码I帧花费时间最少，P帧其次，B帧最后
+                    if(fabs(diff) >= 0.05){ //绝对值
+                        LOGE("视频慢了开始丢包");
+                        releaseAVFrame(&avFrame);
+                        //丢包 调用队列的这个方法就会回调到队列的setSyncHandle()
+                        frames.sync();
+                        continue;
+                    //    packets.sync();
+                    }else{
+                        //在允许的范围之内
+                        av_usleep(delays * 1000000);
+                    }
                 }else{
                     //相等的话 以正常的时间间隔来进行播放正常播放
-                    LOGE("音视频播放时间间隔相等");
-                    av_usleep(delays * 1000000);
+                   // LOGE("音视频播放时间间隔相等");
+                   av_usleep(delays * 1000000);
                 };
             }
         }else{
-            //如果没有音频的话，也要进行正常播放
-            av_usleep(delays * 1000000);
+            //av_usleep(delays * 1000000);
         }
-
+#endif
         releaseAVFrame(&avFrame);
 
         //通过上面的步骤，现在就转成了RGBA数据 存在了dst_data中,将转出来的数据回调出去进行播放
