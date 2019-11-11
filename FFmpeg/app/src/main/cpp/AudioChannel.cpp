@@ -7,16 +7,22 @@
 
 AudioChannel::AudioChannel(int stream_id,AVCodecContext *codecContext)
         : BaseChannel(stream_id,codecContext) {
+    //根据布局获取声道数
     out_channels = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
+    //16位数据 也就是2个字节
     out_16_samplesize = av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
     out_sample_rate = 44100;    //采样率
     //采样率44100  44100 * 2表示多少个16位数据 44100 * 2(16位) * 2(声道数)     44100 * 2(16位)代表1个16位数据
-    output_data = static_cast<uint8_t *>(malloc(out_sample_rate * out_channels * out_sample_rate));
-    memset(output_data,0,out_sample_rate * out_channels * out_16_samplesize);
+    output_data = static_cast<uint8_t *>(malloc(out_sample_rate * out_16_samplesize * out_channels));
+    //记得free
+    memset(output_data,0,out_sample_rate * out_16_samplesize * out_channels);
 }
 
 AudioChannel::~AudioChannel() {
-
+    if (output_data){
+        free(output_data);
+        output_data = 0;
+    }
 }
 
 void* task_audio_decode(void *args){
@@ -40,11 +46,14 @@ void AudioChannel::play() {
 
     //第一个参数是swrContext *,可以传一个0
     //0+输出声道+输出采样位+输出采样率+  输入的3个参数
-    swrContext = swr_alloc_set_opts(swrContext,AV_CH_LAYOUT_STEREO,AV_SAMPLE_FMT_S16,44100,
+
+    swrContext = swr_alloc_set_opts(0,AV_CH_LAYOUT_STEREO,AV_SAMPLE_FMT_S16,out_sample_rate,
                                     codecContext->channel_layout, codecContext->sample_fmt,
                                     codecContext->sample_rate, 0, 0);
+    //切记初始化swrContext 这里开始没有进行初始化，导致没有声音
+    swr_init(swrContext);
 
-//    //开启一个线程来进行解码
+    //开启一个线程来进行解码
     pthread_create(&pid_audio_decode,0,task_audio_decode,this);
     //开启一个线程来进行播放
     pthread_create(&pid_audio_play,0,task_audio_play,this);
@@ -112,29 +121,27 @@ int AudioChannel::getPcm() {
     // 假设我们输入了10个数据 ，swrContext转码器 这一次处理了8个数据，还剩下2个，所以我们要把上一次未处理的2个也添加进来
     // delays 就代表剩下的数据，那么如果不加delays(上次没处理完的数据) , 会造成积压, 然后会导致崩栈
     int64_t delays = swr_get_delay(swrContext,avFrame->sample_rate);
-
-    // 将 nb_samples 个数据 由 sample_rate采样率转成 44100 后 返回多少个数据  相当于 m 个 48000 = nb 个 44100；
+    // 将 nb_samples 个数据 由 sample_rate采样率转成 44100 后 返回output_max_samples个数据  相当于 m 个 nb_samples = output_max_samples 个 44100；
     // AV_ROUND_UP : 向上取整 1.1 = 2
-    int64_t output_max_samples = av_rescale_rnd(avFrame->nb_samples,44100,avFrame->sample_rate,AV_ROUND_UP);
-
+    int64_t output_max_samples = av_rescale_rnd(avFrame->nb_samples+delays,out_sample_rate,avFrame->sample_rate,AV_ROUND_UP);
     //swrContext上下文+输出缓冲区+输出缓冲区能接受的最大数据量+输入数据+输入数据个数
     //返回真正转换的多少个数据  samples单位: 44100*2(声道数)
-    int samples = swr_convert(swrContext, &output_data, output_max_samples, reinterpret_cast<const uint8_t **>(avFrame->data), avFrame->nb_samples);
-    //获得多少个16位数据  ==  samples * out_samplesize * 声道数
+    int samples = swr_convert(swrContext, &output_data, output_max_samples, (const uint8_t **)(avFrame->data),avFrame->nb_samples);
+    //获得多少个16位数据  ==  samples * out_samplesize * 声道数   16位数据就是2个字节数据
     //获得多少个字节大小  ==  samples * out_samplesize * 声道数 * 2
-    dataSize =  samples * out_16_samplesize * out_channels * 2;
+    //获取out_channels个声道输出的16位数据
+    dataSize = samples * out_16_samplesize * out_channels;
     return dataSize;
 }
 
 //播放
-
 void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bqInterface, void *context) {
-    AudioChannel *audioChannel = static_cast<AudioChannel *>(context);
-    //获得pcm 数据  多少个字节 data
-    int dataSize = audioChannel->getPcm();
+    AudioChannel *channel = static_cast<AudioChannel *>(context);
+    //获得pcm 数据  上面返回的是多少个16位数据
+    int dataSize = channel->getPcm();
     if(dataSize > 0 ){
-        // 接收16位数据
-        (*bqInterface)->Enqueue(bqInterface,audioChannel->output_data,dataSize);
+        // 将pcm数据通过队列接口加入到队列中，就会自动播放了，接收16位数据
+        (*bqInterface)->Enqueue(bqInterface,channel->output_data,dataSize);
     }
 }
 
@@ -174,27 +181,35 @@ void AudioChannel::audio_play() {
         return;
     }
     //(3)还可以设置混音效果,效果设置不设置都行
-    result = (*outputMixObject)->GetInterface(outputMixObject, SL_IID_ENVIRONMENTALREVERB,&outputMixEnvironmentalReverb);
-    if (SL_RESULT_SUCCESS == result) {
-        //SL_I3DL2_ENVIRONMENT_PRESET_DEFAULT : 默认
-        //SL_I3DL2_ENVIRONMENT_PRESET_ROOM : 室内
-        //SL_I3DL2_ENVIRONMENT_PRESET_AUDITORIUM : 礼堂 等
-        const SLEnvironmentalReverbSettings reverbSettings = SL_I3DL2_ENVIRONMENT_PRESET_DEFAULT;
-        result = (*outputMixEnvironmentalReverb)->SetEnvironmentalReverbProperties(outputMixEnvironmentalReverb, &reverbSettings);
-        if (result != SL_RESULT_SUCCESS){
-            LOGE("设置混音效果失败");
-            return;
-        }
-    }else{
-        LOGE("获取混音器接口失败");
-        return;
-    }
+//    result = (*outputMixObject)->GetInterface(outputMixObject, SL_IID_ENVIRONMENTALREVERB,&outputMixEnvironmentalReverb);
+//    if (SL_RESULT_SUCCESS == result) {
+//        //SL_I3DL2_ENVIRONMENT_PRESET_DEFAULT : 默认
+//        //SL_I3DL2_ENVIRONMENT_PRESET_ROOM : 室内
+//        //SL_I3DL2_ENVIRONMENT_PRESET_AUDITORIUM : 礼堂 等
+//        const SLEnvironmentalReverbSettings reverbSettings = SL_I3DL2_ENVIRONMENT_PRESET_DEFAULT;
+//        result = (*outputMixEnvironmentalReverb)->SetEnvironmentalReverbProperties(outputMixEnvironmentalReverb, &reverbSettings);
+//        if (result != SL_RESULT_SUCCESS){
+//            LOGE("设置混音效果失败");
+//            return;
+//        }
+//    }else{
+//        LOGE("获取混音器接口失败");
+//        return;
+//    }
     //3.创建播放器
     //(1)指定输入声音信息
     //创建buffer缓冲类型的队列 2个队列
     SLDataLocator_AndroidSimpleBufferQueue android_queue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,2};
     //pcm数据格式: pcm + 2(双声道) + 44100(采样率 1秒采集多少声音) + 16(采样位)
     //  + 16(数据的大小) + LEFT|RIGHT(双声道) + 小端数据
+    //pcm数据格式:
+    //SL_DATAFORMAT_PCM：数据格式为pcm格式
+    //2：双声道
+    //SL_SAMPLINGRATE_44_1：采样率为44100
+    //SL_PCMSAMPLEFORMAT_FIXED_16：采样格式为16bit
+    //SL_PCMSAMPLEFORMAT_FIXED_16：数据大小为16bit
+    //SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT：左右声道（双声道）
+    //SL_BYTEORDER_LITTLEENDIAN：小端模式
     SLDataFormat_PCM pcm = {SL_DATAFORMAT_PCM,2, SL_SAMPLINGRATE_44_1, SL_PCMSAMPLEFORMAT_FIXED_16,
                             SL_PCMSAMPLEFORMAT_FIXED_16,SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT,
                             SL_BYTEORDER_LITTLEENDIAN};
@@ -206,9 +221,9 @@ void AudioChannel::audio_play() {
     SLDataLocator_OutputMix outputMix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject};
     //音轨输出 再把SLDataLocator_OutputMix装到SLDataSink结构体里面
     SLDataSink audioSnk = {&outputMix, NULL};
-    //需要的接口,下面就设置成SL_BOOLEAN_TRUE  操作队列的接口 SL_IID_BUFFERQUEUE，这里不需要混音接口 SL_IID_EFFECTSEND可加可不加，这里试着加上看下
-    const SLInterfaceID ids[2] = {SL_IID_BUFFERQUEUE,SL_IID_EFFECTSEND};
-    const SLboolean req[2] = {SL_BOOLEAN_TRUE,SL_BOOLEAN_TRUE};
+    //需要的接口,下面就设置成SL_BOOLEAN_TRUE  操作队列的接口 SL_IID_BUFFERQUEUE，这里不需要混音接口
+    const SLInterfaceID ids[1] = {SL_IID_BUFFERQUEUE};
+    const SLboolean req[1] = {SL_BOOLEAN_TRUE};
 
     //(3) 创建播放器
     result = (*engineInterface)->CreateAudioPlayer(engineInterface, &bqPlayerObject, &slDataSource, &audioSnk, 1, ids, req);
@@ -249,4 +264,5 @@ void AudioChannel::audio_play() {
     }
     //6.启动播放回调函数 手动的激活一下回调
     bqPlayerCallback(bqPlayerBufferQueueInterface, this);
+
 }
