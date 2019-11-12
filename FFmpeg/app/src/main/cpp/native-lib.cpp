@@ -24,7 +24,7 @@ int JNI_OnLoad(JavaVM* vm, void* reserved){
 //渲染播放 就是将RGBA数据渲染到nativewindow上
 void render(uint8_t *data,int line_size,int width,int height){
     pthread_mutex_lock(&mutex);
-    if(nativeWindow == NULL){
+    if(!nativeWindow){
         pthread_mutex_unlock(&mutex);
         return;
     }
@@ -69,7 +69,9 @@ Java_com_bryanrady_ffmpeg_DNPlayer_native_1prepare(JNIEnv *env, jobject instance
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_bryanrady_ffmpeg_DNPlayer_native_1start(JNIEnv *env, jobject instance) {
-    dnfFmpeg->start();
+    if(dnfFmpeg){
+        dnfFmpeg->start();
+    }
 }
 
 extern "C"
@@ -77,11 +79,30 @@ JNIEXPORT void JNICALL
 Java_com_bryanrady_ffmpeg_DNPlayer_native_1setSurface(JNIEnv *env, jobject instance, jobject surface) {
     pthread_mutex_lock(&mutex);
     //这里要注意随时都会把新的surface传递进来,所以我们要判断一下将老的nativeWindow进行释放
-    if(nativeWindow != NULL){
+    if(nativeWindow){
         ANativeWindow_release(nativeWindow);
         nativeWindow = 0;
     }
     //将java的suface变成native的窗口
     nativeWindow = ANativeWindow_fromSurface(env,surface);
+    pthread_mutex_unlock(&mutex);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_bryanrady_ffmpeg_DNPlayer_native_1stop(JNIEnv *env, jobject instance) {
+    if(dnfFmpeg){
+        dnfFmpeg->stop();
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_bryanrady_ffmpeg_DNPlayer_native_1release(JNIEnv *env, jobject instance) {
+    pthread_mutex_lock(&mutex);
+    if(nativeWindow){
+        ANativeWindow_release(nativeWindow);
+        nativeWindow = 0;
+    }
     pthread_mutex_unlock(&mutex);
 }

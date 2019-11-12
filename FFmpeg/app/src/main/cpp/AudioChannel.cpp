@@ -25,6 +25,37 @@ AudioChannel::~AudioChannel() {
     }
 }
 
+//这里没有什么太耗时的操作，就不用开线程进行处理了
+void AudioChannel::stop() {
+    isPlaying = 0;
+    //这里调用setWork(0) 就会通知不会继续等待了，所以这里setWork(0)后从队列中取数据就不会卡住了
+    packets.setWork(0);
+    frames.setWork(0);
+    pthread_join(pid_audio_decode,0);
+    pthread_join(pid_audio_play,0);
+    if(swrContext){
+        swr_free(&swrContext);
+        swrContext = 0;
+    }
+
+    if(bqPlayerObject){
+        (*bqPlayerObject)->Destroy(bqPlayerObject);
+        bqPlayerObject = 0;
+        bqPlayerInterface = 0;
+        bqPlayerBufferQueueInterface = 0;
+    }
+    if(outputMixObject){
+        (*outputMixObject)->Destroy(outputMixObject);
+        outputMixObject = 0;
+    }
+    if(engineObject){
+        (*engineObject)->Destroy(engineObject);
+        engineObject = 0;
+        engineInterface = 0;
+    }
+
+}
+
 void* task_audio_decode(void *args){
     AudioChannel *channel = static_cast<AudioChannel *>(args);
     channel->audio_decode();
@@ -46,7 +77,6 @@ void AudioChannel::play() {
 
     //第一个参数是swrContext *,可以传一个0
     //0+输出声道+输出采样位+输出采样率+  输入的3个参数
-
     swrContext = swr_alloc_set_opts(0,AV_CH_LAYOUT_STEREO,AV_SAMPLE_FMT_S16,out_sample_rate,
                                     codecContext->channel_layout, codecContext->sample_fmt,
                                     codecContext->sample_rate, 0, 0);
@@ -91,6 +121,7 @@ void AudioChannel::audio_decode() {
                 //这里的AVERROR(EAGAIN)意思是:从解码器中读取的数据包太少，导致不够生成一段图像，需要更多的数据包才能生存图像
                 continue;
             }else{
+                releaseAVFrame(&avFrame);
                 break;
             }
         }
@@ -136,7 +167,7 @@ int AudioChannel::getPcm() {
     //pts  获得当前帧AVFrame 的一个相对播放时间 (相对开始播放的时间)
     //获得音频 相对播放这一段AVFrame数据的秒数
     frameClock = avFrame->pts * av_q2d(time_base);
-
+    releaseAVFrame(&avFrame);
     return dataSize;
 }
 

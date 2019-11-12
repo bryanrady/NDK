@@ -17,6 +17,11 @@ BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational t
 BaseChannel::~BaseChannel() {
     packets.clear();
     frames.clear();
+    if(codecContext){
+        avcodec_close(codecContext);
+        avcodec_free_context(&codecContext);
+        codecContext = 0;
+    }
 }
 
 void BaseChannel::releaseAvPacket(AVPacket **packet) {

@@ -28,6 +28,8 @@ public:
     //视频渲染播放
     void video_render();
 
+    void stop();
+
     void setRenderFrameCallback(RenderFrameCallback callback);
 
     void setAudioChannel(AudioChannel *audioChannel);

@@ -33,6 +33,9 @@ public class DNPlayer implements SurfaceHolder.Callback {
      * @param surfaceView
      */
     public void setSurfaceView(SurfaceView surfaceView){
+        if(mSurfaceHolder != null){
+            mSurfaceHolder.removeCallback(this);
+        }
         mSurfaceHolder = surfaceView.getHolder();
         mSurfaceHolder.addCallback(this);
     }
@@ -42,7 +45,7 @@ public class DNPlayer implements SurfaceHolder.Callback {
     }
 
     public void stopPlay(){
-
+        native_stop();
     }
 
     /**
@@ -54,6 +57,7 @@ public class DNPlayer implements SurfaceHolder.Callback {
 
     public void release(){
         mSurfaceHolder.removeCallback(this);
+        native_release();
     }
 
     private void onError(int errorCode){
@@ -122,4 +126,8 @@ public class DNPlayer implements SurfaceHolder.Callback {
     private native void native_start();
 
     private native void native_setSurface(Surface surface);
+
+    private native void native_stop();
+
+    private native void native_release();
 }

@@ -216,10 +216,26 @@ void VideoChannel::video_render(){
 
         //通过上面的步骤，现在就转成了RGBA数据 存在了dst_data中,将转出来的数据回调出去进行播放
         //dst_data是一个指针数组，它将所有的数据都存储在第0个上面（123上面都没有数据的），所以我们直接将第0个回调出去即可，这就是为什么释放也只是释放第0个
-        if(renderFrameCallback != NULL){
+        if(renderFrameCallback){
             renderFrameCallback(dst_data[0],dst_linesize[0],codecContext->width,codecContext->height);
         }
     }
     av_freep(&dst_data[0]);
     releaseAVFrame(&avFrame);
+
+    isPlaying = 0;
+    if(swsContext){
+        sws_freeContext(swsContext);
+        swsContext = 0;
+    }
+}
+
+//这里没有什么太耗时的操作，就不用开线程进行处理了
+void VideoChannel::stop() {
+    isPlaying = 0;
+    //这里调用setWork(0) 就会通知不会继续等待了，所以这里setWork(0)后从队列中取数据就不会卡住了
+    packets.setWork(0);
+    frames.setWork(0);
+    pthread_join(pid_video_decode,0);
+    pthread_join(pid_video_render,0);
 }

@@ -30,6 +30,8 @@ public:
     //获得PCM
     int getPcm();
 
+    void stop();
+
 private:
     pthread_t pid_audio_decode;
     pthread_t pid_audio_play;
