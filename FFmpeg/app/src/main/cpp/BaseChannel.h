@@ -8,7 +8,7 @@
 #include "safe_queue.h"
 
 extern "C"{
-#include "include/libavcodec/avcodec.h"
+#include <libavcodec/avcodec.h>
 };
 
 //音频和视频的父类  用来处理音频和视频的相同操作

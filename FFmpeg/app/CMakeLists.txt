@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.4.1)
 
 #这里添加<stdlib.h>是因为 atof函数现在变成了stdlib的函数，所以需要这样引用
-include_directories(src/main/cpp/include <stdlib.h>)
+include_directories(src/main/cpp/include/${ANDROID_ABI} <stdlib.h>)
 
 # 创建一个变量 source_file 它的值就是src/main/cpp/ 所有的.cpp文件
 file(GLOB source_file src/main/cpp/*.cpp)

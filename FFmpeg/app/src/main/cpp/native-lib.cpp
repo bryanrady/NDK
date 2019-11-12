@@ -6,7 +6,7 @@
 #include "macro.h"
 
 extern "C"{
-#include "include/libavutil/avutil.h"
+#include <libavutil/avutil.h>
 }
 
 DNFFmpeg *dnfFmpeg = 0;
