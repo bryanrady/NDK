@@ -28,9 +28,9 @@ public:
     //视频渲染播放
     void video_render();
 
-     void setRenderFrameCallback(RenderFrameCallback callback);
+    void setRenderFrameCallback(RenderFrameCallback callback);
 
-     void setAudioChannel(AudioChannel *audioChannel);
+    void setAudioChannel(AudioChannel *audioChannel);
 
 private:
     pthread_t pid_video_decode;

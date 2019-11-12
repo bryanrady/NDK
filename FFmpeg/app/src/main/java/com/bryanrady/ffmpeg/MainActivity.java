@@ -44,8 +44,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         mDnPlayer = new DNPlayer();
         mDnPlayer.setOnPreparedListener(this);
-        //mDnPlayer.setDataSource("rtmp://192.168.1.100//live/wqb");
-        mDnPlayer.setDataSource("http://ivi.bupt.edu.cn/hls/cctv1hd.m3u8");
+    //    mDnPlayer.setDataSource("rtmp://192.168.1.100:1935/live/wqb");
+        mDnPlayer.setDataSource("rtmp://58.200.131.2:1935/livetv/hunantv");
         mDnPlayer.setSurfaceView(mSurfaceView);
     }
 
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(MainActivity.this,"准备成功了!",Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this,"准备工作成功!",Toast.LENGTH_SHORT).show();
             }
         });
         mDnPlayer.startPlay();
