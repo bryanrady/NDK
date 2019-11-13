@@ -121,7 +121,6 @@ void AudioChannel::audio_decode() {
                 //这里的AVERROR(EAGAIN)意思是:从解码器中读取的数据包太少，导致不够生成一段图像，需要更多的数据包才能生存图像
                 continue;
             }else{
-                releaseAVFrame(&avFrame);
                 break;
             }
         }

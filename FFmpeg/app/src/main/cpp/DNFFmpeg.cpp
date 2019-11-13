@@ -129,7 +129,7 @@ void DNFFmpeg::_prepare() {
         //音视频的相同处理
         //(1).通过当前流的编码方式来查找解码器
         AVCodec *avCodec = avcodec_find_decoder(avCodecId);
-        if (avCodec == NULL){
+        if (!avCodec){
             LOGE("查找音视频编码器失败");
             if (callHelper){
                 callHelper->onError(THREAD_CHILD,FFMPEG_FIND_DECODER_FAIL);
@@ -138,7 +138,7 @@ void DNFFmpeg::_prepare() {
         }
         //(2).获得解码器上下文
         AVCodecContext *codecContext = avcodec_alloc_context3(avCodec);
-        if (codecContext == NULL){
+        if (!codecContext){
             LOGE("获得解码器上下文失败");
             if (callHelper){
                 callHelper->onError(THREAD_CHILD,FFMPEG_ALLOC_CODEC_CONTEXT_FAIL);
@@ -181,7 +181,7 @@ void DNFFmpeg::_prepare() {
     }
 
     //经过for循环查找之后，如果既没有音也没有视频(这种情况很少见，但是也要进行处理)
-    if (audioChannel == NULL && videoChannel == NULL){
+    if (!audioChannel && !videoChannel){
         if (callHelper){
             callHelper->onError(THREAD_CHILD,FFMPEG_NOMEDIA);
         }
@@ -202,12 +202,12 @@ void* task_start(void *args){
 
 void DNFFmpeg::start() {
     isPlaying = 1;
-    if(audioChannel != NULL){
+    if(audioChannel){
         //调用音频解码播放
         audioChannel->play();
     }
-    if(videoChannel != NULL){
-        if(audioChannel != NULL){
+    if(videoChannel){
+        if(audioChannel){
             videoChannel->setAudioChannel(audioChannel);
         }
         //调用视频解码播放
@@ -233,7 +233,7 @@ void DNFFmpeg::_start() {
             continue;
         }
         AVPacket *avPacket = av_packet_alloc();
-        if (avPacket != NULL){
+        if (avPacket){
             int ret = av_read_frame(formatContext,avPacket);
             //0 if OK, < 0 on error or end of file
             if(ret == 0){

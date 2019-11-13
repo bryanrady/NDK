@@ -25,7 +25,7 @@ BaseChannel::~BaseChannel() {
 }
 
 void BaseChannel::releaseAvPacket(AVPacket **packet) {
-    if (packet != NULL){
+    if (packet){
         //av_packet_free和av_packet_alloc()呈对应关系
         //存放音频包或者视频包的队列,av_packet_alloc()内部获取的AVPacket *包所占用的内存是堆内存
         // ，所以我们在调用队列的clear要手动的来释放
@@ -35,7 +35,7 @@ void BaseChannel::releaseAvPacket(AVPacket **packet) {
 }
 
 void BaseChannel::releaseAvPacket2(AVPacket *&packet) {
-    if (packet != NULL){
+    if (packet){
         //av_packet_free和av_packet_alloc()呈对应关系
         av_packet_free(&packet);
         packet = 0;
@@ -43,7 +43,7 @@ void BaseChannel::releaseAvPacket2(AVPacket *&packet) {
 }
 
 void BaseChannel::releaseAVFrame(AVFrame **avFrame) {
-    if(avFrame != NULL){
+    if(avFrame){
         av_frame_free(avFrame);
         *avFrame = 0;
     }

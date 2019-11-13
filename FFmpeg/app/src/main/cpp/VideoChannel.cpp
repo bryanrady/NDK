@@ -113,7 +113,6 @@ void VideoChannel::video_decode() {
                 //这里的AVERROR(EAGAIN)意思是:从解码器中读取的数据包太少，导致不够生成一段图像，需要更多的数据包才能生存图像
                 continue;
             }else{
-                releaseAvPacket(&avPacket);
                 break;
             }
         }
@@ -167,7 +166,7 @@ void VideoChannel::video_render(){
         // 真实需要的间隔时间
         double delays = extra_delay + frame_delays;
 
-        if (audioChannel != NULL){
+        if (audioChannel){
             //如果第一个图像出来的时候，video_frame_clock可能为0，那就以正常的时间间隔来进行播放正常播放
             if (video_frame_clock == 0) {
                 av_usleep(delays * 1000000);

@@ -3,6 +3,7 @@ package com.bryanrady.ffmpeg;
 import android.content.res.Configuration;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -55,7 +56,8 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
     }
 
     @Override
-    public void onError(int errorCode) {
+    public void onError(final int errorCode) {
+        Log.e("wangqingbin","错误码："+errorCode);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
