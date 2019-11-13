@@ -69,12 +69,6 @@ void* task_audio_play(void *args){
 }
 
 void AudioChannel::play() {
-    //设置为正在播放
-    isPlaying = 1;
-    //将队列设置为工作状态
-    packets.setWork(1);
-    frames.setWork(1);
-
     //第一个参数是swrContext *,可以传一个0
     //0+输出声道+输出采样位+输出采样率+  输入的3个参数
     swrContext = swr_alloc_set_opts(0,AV_CH_LAYOUT_STEREO,AV_SAMPLE_FMT_S16,out_sample_rate,
@@ -82,6 +76,12 @@ void AudioChannel::play() {
                                     codecContext->sample_rate, 0, 0);
     //切记初始化swrContext 这里开始没有进行初始化，导致没有声音
     swr_init(swrContext);
+
+    //设置为正在播放
+    isPlaying = 1;
+    //将队列设置为工作状态
+    packets.setWork(1);
+    frames.setWork(1);
 
     //开启一个线程来进行解码
     pthread_create(&pid_audio_decode,0,task_audio_decode,this);

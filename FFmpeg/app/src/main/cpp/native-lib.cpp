@@ -44,7 +44,7 @@ void render(uint8_t *data,int line_size,int width,int height){
     int dst_linesize = nativeWindow_Buffer.stride * 4;
     //一行一行的进行拷贝,这里还要注意个问题，我们在c++线程里面进行拷贝数据的时候，java线程调用setSurface可能会把老的nativeWindow进行释放
     //所以可能会导致崩溃，所以要进行同步
-    for (size_t i = 0; i < nativeWindow_Buffer.height; ++i) {
+    for (int i = 0; i < nativeWindow_Buffer.height; ++i) {
         //将data里面的数据拷贝到dst_data中，每次拷贝dst_linesize个字节
         memcpy(dst_data + i * dst_linesize,data + i * line_size, dst_linesize);
     }

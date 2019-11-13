@@ -117,7 +117,7 @@ void DNFFmpeg::_prepare() {
         return;
     }
     //nb_streams 有几个流，就是有几个视频或者音频或者其他东西，可能不光只包含音视频流
-    for(size_t i=0;i<formatContext->nb_streams;i++){
+    for(int i=0;i<formatContext->nb_streams;++i){
         //获取媒体视频流 这段流可能是视频也可能是音频
         AVStream *avStream = formatContext->streams[i];
         //AVCodecParameters包含了解码这段流的各种信息（流格式/宽高/码率/帧率等）
@@ -221,38 +221,37 @@ void DNFFmpeg::start() {
  * 专门用来读取媒体数据包(音视频数据包) 解码放到专门的类VideoChannel来进行操作
  */
 void DNFFmpeg::_start() {
+    int ret;
     while (isPlaying){
         //这里读取文件的时候可以做一下限制，如果读本地文件的时候一下子就读完了，可能会造成oom
         if(audioChannel && audioChannel->packets.size() > 100){
             //每次睡眠10毫秒
-            av_usleep(1000*10);
+            av_usleep(1000 * 10);
             continue;
         }
         if(videoChannel && videoChannel->packets.size() > 100){
-            av_usleep(1000*10);
+            av_usleep(1000 * 10);
             continue;
         }
         AVPacket *avPacket = av_packet_alloc();
-        if (avPacket){
-            int ret = av_read_frame(formatContext,avPacket);
-            //0 if OK, < 0 on error or end of file
-            if(ret == 0){
-                //这里根据avPacket->stream_index(是一个流序号)和存进去的i来判断是音频包还是视频包
-                if(audioChannel && avPacket->stream_index == audioChannel->stream_id){
-                    audioChannel->packets.push(avPacket);
-                }else if(videoChannel && avPacket->stream_index == videoChannel->stream_id){
-                    videoChannel->packets.push(avPacket);
-                }
-            }else if(ret == AVERROR_EOF){   //读取完成了，但是可能还没有播放完
-                if(!audioChannel->packets.empty() && !audioChannel->frames.empty()
-                    && !videoChannel->packets.empty() && !videoChannel->frames.empty()){
-                    break;
-                }
-                //为什么这里要让它继续循环，而不是sleep
-                //如果是做直播，可以sleep,如果要支持点播也就是播放本地文件，我们拖动进度条后退的时候，也不会刷新了，可能就没有效果了
-            }else{
+        ret = av_read_frame(formatContext,avPacket);
+        //0 if OK, < 0 on error or end of file
+        if(ret == 0){
+            //这里根据avPacket->stream_index(是一个流序号)和存进去的i来判断是音频包还是视频包
+            if(audioChannel && avPacket->stream_index == audioChannel->stream_id){
+                audioChannel->packets.push(avPacket);
+            }else if(videoChannel && avPacket->stream_index == videoChannel->stream_id){
+                videoChannel->packets.push(avPacket);
+            }
+        }else if(ret == AVERROR_EOF){   //读取完成了，但是可能还没有播放完
+            if(!audioChannel->packets.empty() && !audioChannel->frames.empty()
+               && !videoChannel->packets.empty() && !videoChannel->frames.empty()){
                 break;
             }
+            //为什么这里要让它继续循环，而不是sleep
+            //如果是做直播，可以sleep,如果要支持点播也就是播放本地文件，我们拖动进度条后退的时候，也不会刷新了，可能就没有效果了
+        }else{
+            break;
         }
     }
     //循环退出后就执行音视频的stop
