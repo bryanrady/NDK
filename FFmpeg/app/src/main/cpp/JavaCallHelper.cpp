@@ -15,6 +15,7 @@ JavaCallHelper::JavaCallHelper(JavaVM *vm,JNIEnv *env,jobject instance) {
     jclass dnPlayerCls = env->GetObjectClass(instance);
     this->onErrorMethodId = env->GetMethodID(dnPlayerCls,"onError","(I)V");
     this->onPreparedMethodId = env->GetMethodID(dnPlayerCls,"onPrepared","()V");
+    this->onProgressMethodId = env->GetMethodID(dnPlayerCls, "onProgress", "(I)V");
 }
 
 JavaCallHelper::~JavaCallHelper() {
@@ -26,15 +27,16 @@ void JavaCallHelper::onError(int thread, int errorCode) {
         //可以直接使用env
         env->CallVoidMethod(instance,onErrorMethodId,errorCode);
     }else{
-        //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
-        JNIEnv *env = 0;
         //把当前native线程附加到java 虚拟机中
-        jint ret = vm->AttachCurrentThread(&env,0);
-        if (ret == JNI_OK){
-            env->CallVoidMethod(instance,onErrorMethodId,errorCode);
-            LOGE("C++反射调用Java onError");
+        if (vm){
+            //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
+            JNIEnv *env = 0;
+            jint ret = vm->AttachCurrentThread(&env,0);
+            if (ret == JNI_OK){
+                env->CallVoidMethod(instance,onErrorMethodId,errorCode);
+            }
+            vm->DetachCurrentThread();
         }
-        vm->DetachCurrentThread();
     }
 }
 
@@ -43,16 +45,35 @@ void JavaCallHelper::onPrepared(int thread) {
         //可以直接使用env
         env->CallVoidMethod(instance,onPreparedMethodId);
     }else{
-        //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
-        JNIEnv *env  = 0;
         //把当前native线程附加到java 虚拟机中
-        jint ret = vm->AttachCurrentThread(&env,0);
-        if (ret == JNI_OK){
-            env->CallVoidMethod(instance,onPreparedMethodId);
-            LOGE("C++反射调用Java onPrepared");
+        if (vm){
+            //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
+            JNIEnv *env = 0;
+            jint ret = vm->AttachCurrentThread(&env,0);
+            if (ret == JNI_OK){
+                env->CallVoidMethod(instance,onPreparedMethodId);
+            }
+            vm->DetachCurrentThread();
         }
-        vm->DetachCurrentThread();
+    }
 
+}
+
+void JavaCallHelper::onProgress(int thread, int progress) {
+    if(thread == THREAD_MAIN){
+        //可以直接使用env
+        env->CallVoidMethod(instance,onProgressMethodId,progress);
+    }else{
+        //把当前native线程附加到java 虚拟机中
+        if (vm){
+            //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
+            JNIEnv *env = 0;
+            jint ret = vm->AttachCurrentThread(&env,0);
+            if (ret == JNI_OK){
+                env->CallVoidMethod(instance,onProgressMethodId,progress);
+            }
+            vm->DetachCurrentThread();
+        }
     }
 
 }

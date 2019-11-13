@@ -76,7 +76,7 @@ Java_com_bryanrady_ffmpeg_DNPlayer_native_1start(JNIEnv *env, jobject instance) 
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_bryanrady_ffmpeg_DNPlayer_native_1setSurface(JNIEnv *env, jobject instance, jobject surface) {
+Java_com_bryanrady_ffmpeg_DNPlayer_native_1set_1surface(JNIEnv *env, jobject instance, jobject surface) {
     pthread_mutex_lock(&mutex);
     //这里要注意随时都会把新的surface传递进来,所以我们要判断一下将老的nativeWindow进行释放
     if(nativeWindow){
@@ -105,4 +105,21 @@ Java_com_bryanrady_ffmpeg_DNPlayer_native_1release(JNIEnv *env, jobject instance
         nativeWindow = 0;
     }
     pthread_mutex_unlock(&mutex);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_bryanrady_ffmpeg_DNPlayer_native_1get_1duration(JNIEnv *env, jobject instance) {
+    if (dnfFmpeg) {
+        return dnfFmpeg->getDuration();
+    }
+    return 0;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_bryanrady_ffmpeg_DNPlayer_native_1seek(JNIEnv *env, jobject instance, jint progress) {
+    if (dnfFmpeg){
+        dnfFmpeg->seek(progress);
+    }
 }

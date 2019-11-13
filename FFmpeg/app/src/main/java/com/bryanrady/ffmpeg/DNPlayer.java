@@ -19,6 +19,8 @@ public class DNPlayer implements SurfaceHolder.Callback {
     private String mDataSource;
     private SurfaceHolder mSurfaceHolder;
     private OnPreparedListener mOnPreparedListener;
+    private OnErrorListener mOnErrorListener;
+    private OnProgressListener mOnProgressListener;
 
     /**
      * 设置播放的文件路径 或者 直播地址
@@ -37,7 +39,15 @@ public class DNPlayer implements SurfaceHolder.Callback {
             mSurfaceHolder.removeCallback(this);
         }
         mSurfaceHolder = surfaceView.getHolder();
+        native_set_surface(mSurfaceHolder.getSurface());
         mSurfaceHolder.addCallback(this);
+    }
+
+    /**
+     * 准备好要播放的视频 实现视频的解封装调用native方法
+     */
+    public void prepare() {
+        native_prepare(mDataSource);
     }
 
     public void startPlay(){
@@ -48,39 +58,66 @@ public class DNPlayer implements SurfaceHolder.Callback {
         native_stop();
     }
 
-    /**
-     * 准备好要播放的视频 实现视频的解封装调用native方法
-     */
-    public void prepare() {
-        native_prepare(mDataSource);
-    }
-
     public void release(){
-        mSurfaceHolder.removeCallback(this);
+        if (mSurfaceHolder != null){
+            mSurfaceHolder.removeCallback(this);
+        }
         native_release();
     }
 
+    public int getDuration() {
+        return native_get_duration();
+    }
+
+    public void seek(final int progress) {
+        new Thread() {
+            @Override
+            public void run() {
+                native_seek(progress);
+            }
+        }.start();
+    }
+
     private void onError(int errorCode){
-        Log.e("wanqgingbin","成功调用了Java的onError");
-        if (mOnPreparedListener!=null){
-            mOnPreparedListener.onError(errorCode);
+        if (mOnErrorListener!=null){
+            mOnErrorListener.onError(errorCode);
         }
     }
 
     private void onPrepared(){
-        Log.e("wanqgingbin","onPrepared");
         if (mOnPreparedListener!=null){
             mOnPreparedListener.onPrepared();
         }
     }
 
+    public void onProgress(int progress) {
+        if (mOnProgressListener != null) {
+            mOnProgressListener.onProgress(progress);
+        }
+    }
+
     public interface OnPreparedListener{
         void onPrepared();
+    }
+
+    public interface OnErrorListener{
         void onError(int errorCode);
+    }
+
+    public interface OnProgressListener {
+        void onProgress(int progress);
     }
 
     public void setOnPreparedListener(OnPreparedListener preparedListener) {
         this.mOnPreparedListener = preparedListener;
+    }
+
+    public void setOnErrorListener(OnErrorListener errorListener) {
+        this.mOnErrorListener = errorListener;
+    }
+
+    public void setOnProgressListener(OnProgressListener progressListener) {
+        this.mOnProgressListener = progressListener;
     }
 
     /**
@@ -102,7 +139,7 @@ public class DNPlayer implements SurfaceHolder.Callback {
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         //画布发生改变了，我们就要把改变的画布传给native
-        native_setSurface(holder.getSurface());
+        native_set_surface(holder.getSurface());
     }
 
     /**
@@ -125,9 +162,14 @@ public class DNPlayer implements SurfaceHolder.Callback {
      */
     private native void native_start();
 
-    private native void native_setSurface(Surface surface);
+    private native void native_set_surface(Surface surface);
 
     private native void native_stop();
 
     private native void native_release();
+
+    private native int native_get_duration();
+
+    private native void native_seek(int progress);
+
 }

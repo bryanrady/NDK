@@ -11,11 +11,12 @@
 
 extern "C"{
 #include <libswresample/swresample.h>
+#include <libavutil/time.h>
 };
 
 class AudioChannel : public BaseChannel{
 public:
-    AudioChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base);
+    AudioChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,JavaCallHelper *callHelper);
     ~AudioChannel();
 
     //输出缓冲区

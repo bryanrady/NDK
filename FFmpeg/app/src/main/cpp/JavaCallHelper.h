@@ -19,13 +19,14 @@ public:
     //thread参数是为了标记当前是否处于主线程，方便我们在c++进行回调
     void onError(int thread,int errorCode);
     void onPrepared(int thread);
-
+    void onProgress(int thread, int progress);
 private:
     JavaVM *vm;
     JNIEnv *env;
     jobject instance;
     jmethodID onErrorMethodId;
     jmethodID onPreparedMethodId;
+    jmethodID onProgressMethodId;
 };
 
 #endif //FFMPEG_JAVACALLHELPER_H

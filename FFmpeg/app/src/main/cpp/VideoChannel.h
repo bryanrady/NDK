@@ -18,7 +18,7 @@ typedef void (*RenderFrameCallback)(uint8_t *,int,int,int);
 //用来完成视频的解码和播放
 class VideoChannel : public BaseChannel{
 public:
-    VideoChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,int fps);
+    VideoChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,JavaCallHelper *callHelper,int fps);
     ~VideoChannel();
 
     //视频解码播放入口

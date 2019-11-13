@@ -14,11 +14,16 @@ DNFFmpeg::DNFFmpeg(const char *data_source,JavaCallHelper *callHelper) {
      this->dataSource = new char[strlen(data_source)+1];
      strcpy(this->dataSource,data_source);
      this->callHelper = callHelper;
+
+    isPlaying = 0;
+    duration = 0;
+    pthread_mutex_init(&seekMutex, 0);
 }
 
 //因为DNFFmpeg是在子线程中释放的，所以不能在析构函数中释放JavaCallHelper，因为JavaCallHelper的析构函数用到了主线程的env
 DNFFmpeg::~DNFFmpeg() {
     DELETE(dataSource);
+    pthread_mutex_destroy(&seekMutex);
 }
 
 void* task_stop(void *args){
@@ -91,6 +96,7 @@ void DNFFmpeg::_prepare() {
     //只有返回0才会成功，否则都是失败 失败原因：可能文件路径不对、没有网络等
     //第三个参数：指示我们打开媒体的格式(mp4/flv等格式)
     //第四个参数; 字典，像一个map集合
+    formatContext = avformat_alloc_context();
     AVDictionary *options = 0;
     //设置超时时间 单位是微秒 5s
     av_dict_set(&options,"timeout","5000000",0);
@@ -116,6 +122,8 @@ void DNFFmpeg::_prepare() {
         }
         return;
     }
+    //视频时长（单位：微秒us，转换为秒需要除以1000000）
+    duration = formatContext->duration / 1000000;
     //nb_streams 有几个流，就是有几个视频或者音频或者其他东西，可能不光只包含音视频流
     for(int i=0;i<formatContext->nb_streams;++i){
         //获取媒体视频流 这段流可能是视频也可能是音频
@@ -167,7 +175,7 @@ void DNFFmpeg::_prepare() {
         AVRational time_base = avStream->time_base;
         //对音频和视频进行不同的处理，但是有些处理是相同的，我们写在上面
         if(codec_type == AVMEDIA_TYPE_AUDIO){   //音频
-            audioChannel= new AudioChannel(i,codecContext,time_base);  //这里将i传进去，后面会通过这个i来判断这个流是视频包还是音频包
+            audioChannel= new AudioChannel(i,codecContext,time_base,callHelper);  //这里将i传进去，后面会通过这个i来判断这个流是视频包还是音频包
         }else if(codec_type == AVMEDIA_TYPE_VIDEO){ //视频
             //平均帧率: 就是单位时间内需要显示多少个图像
             AVRational avg_frame_rate = avStream->avg_frame_rate;
@@ -175,7 +183,7 @@ void DNFFmpeg::_prepare() {
             //int fps = avg_frame_rate.num / avg_frame_rate.num;
             int fps = av_q2d(avg_frame_rate);
 
-            videoChannel = new VideoChannel(i,codecContext,time_base,fps);
+            videoChannel = new VideoChannel(i,codecContext,time_base,callHelper,fps);
             videoChannel->setRenderFrameCallback(renderFrameCallback);
         }
     }
@@ -221,7 +229,6 @@ void DNFFmpeg::start() {
  * 专门用来读取媒体数据包(音视频数据包) 解码放到专门的类VideoChannel来进行操作
  */
 void DNFFmpeg::_start() {
-    int ret;
     while (isPlaying){
         //这里读取文件的时候可以做一下限制，如果读本地文件的时候一下子就读完了，可能会造成oom
         if(audioChannel && audioChannel->packets.size() > 100){
@@ -233,8 +240,11 @@ void DNFFmpeg::_start() {
             av_usleep(1000 * 10);
             continue;
         }
+        //锁住formatContext
+        pthread_mutex_lock(&seekMutex);
         AVPacket *avPacket = av_packet_alloc();
-        ret = av_read_frame(formatContext,avPacket);
+        int ret = av_read_frame(formatContext,avPacket);
+        pthread_mutex_unlock(&seekMutex);
         //0 if OK, < 0 on error or end of file
         if(ret == 0){
             //这里根据avPacket->stream_index(是一个流序号)和存进去的i来判断是音频包还是视频包
@@ -262,4 +272,44 @@ void DNFFmpeg::_start() {
 
 void DNFFmpeg::setRenderFrameCallback(RenderFrameCallback callback){
     this->renderFrameCallback = callback;
+}
+
+int DNFFmpeg::getDuration() {
+    return this->duration;
+}
+
+void DNFFmpeg::seek(int progress) {
+//进去必须 在0- duration 范围之类
+    if (progress< 0 || progress >= duration) {
+        return;
+    }
+    if (!audioChannel && !videoChannel) {
+        return;
+    }
+    if (!formatContext) {
+        return;
+    }
+    pthread_mutex_lock(&seekMutex);
+    //单位是 微妙
+    int64_t seek = progress * 1000000;
+    //seek到请求的时间 之前最近的关键帧
+    // 只有从关键帧才能开始解码出完整图片
+    av_seek_frame(formatContext, -1,seek, AVSEEK_FLAG_BACKWARD);
+//    avformat_seek_file(formatContext, -1, INT64_MIN, seek, INT64_MAX, 0);
+    // 音频、与视频队列中的数据 是不是就可以丢掉了？
+    if (audioChannel) {
+        //暂停队列
+        audioChannel->stopWork();
+        //可以清空缓存
+//        avcodec_flush_buffers();
+        audioChannel->clearQueue();
+        //启动队列
+        audioChannel->startWork();
+    }
+    if (videoChannel) {
+        videoChannel->stopWork();
+        videoChannel->clearQueue();
+        videoChannel->startWork();
+    }
+    pthread_mutex_unlock(&seekMutex);
 }

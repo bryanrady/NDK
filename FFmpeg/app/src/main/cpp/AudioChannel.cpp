@@ -5,8 +5,8 @@
 #include "AudioChannel.h"
 #include "macro.h"
 
-AudioChannel::AudioChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base)
-        : BaseChannel(stream_id,codecContext,time_base) {
+AudioChannel::AudioChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,JavaCallHelper *callHelper)
+        : BaseChannel(stream_id,codecContext,time_base,callHelper) {
     //根据布局获取声道数
     out_channels = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     //16位数据 也就是2个字节
@@ -28,14 +28,20 @@ AudioChannel::~AudioChannel() {
 //这里没有什么太耗时的操作，就不用开线程进行处理了
 void AudioChannel::stop() {
     isPlaying = 0;
+    callHelper = 0;
     //这里调用setWork(0) 就会通知不会继续等待了，所以这里setWork(0)后从队列中取数据就不会卡住了
-    packets.setWork(0);
-    frames.setWork(0);
+    stopWork();
     pthread_join(pid_audio_decode,0);
     pthread_join(pid_audio_play,0);
     if(swrContext){
         swr_free(&swrContext);
         swrContext = 0;
+    }
+
+    //设置停止状态
+    if (bqPlayerInterface) {
+        (*bqPlayerInterface)->SetPlayState(bqPlayerInterface, SL_PLAYSTATE_STOPPED);
+        bqPlayerInterface = 0;
     }
 
     if(bqPlayerObject){
@@ -80,8 +86,7 @@ void AudioChannel::play() {
     //设置为正在播放
     isPlaying = 1;
     //将队列设置为工作状态
-    packets.setWork(1);
-    frames.setWork(1);
+    startWork();
 
     //开启一个线程来进行解码
     pthread_create(&pid_audio_decode,0,task_audio_decode,this);
@@ -123,6 +128,10 @@ void AudioChannel::audio_decode() {
             }else{
                 break;
             }
+        }
+        while (frames.size() > 100 && isPlaying) {
+            av_usleep(1000 * 10);
+            continue;
         }
         //将得到的图像放进去图像队列中
         frames.push(avFrame);
@@ -166,6 +175,9 @@ int AudioChannel::getPcm() {
     //pts  获得当前帧AVFrame 的一个相对播放时间 (相对开始播放的时间)
     //获得音频 相对播放这一段AVFrame数据的秒数
     frameClock = avFrame->pts * av_q2d(time_base);
+    if (callHelper) {
+        callHelper->onProgress(THREAD_CHILD, frameClock);
+    }
     releaseAVFrame(&avFrame);
     return dataSize;
 }

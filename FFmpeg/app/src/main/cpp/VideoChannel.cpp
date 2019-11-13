@@ -36,8 +36,8 @@ void dropAVFrame(queue<AVFrame *> &frames){
 }
 
 //在调用构造方法的时候 将streamId传给父类的stream_id,将avCodecContext传给父类的codecContext
-VideoChannel::VideoChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,int fps)
-        : BaseChannel(stream_id, codecContext,time_base) {
+VideoChannel::VideoChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,JavaCallHelper *callHelper,int fps)
+        : BaseChannel(stream_id, codecContext,time_base,callHelper) {
     this->fps = fps;
 
     packets.setSyncHandle(dropAVPacket);
@@ -74,8 +74,7 @@ void VideoChannel::play() {
     //设置为正在播放
     isPlaying = 1;
     //将队列设置为工作状态
-    packets.setWork(1);
-    frames.setWork(1);
+    startWork();
     //开启一个线程来进行解码
     pthread_create(&pid_video_decode,0,task_video_decode,this);
     //开启一个线程来进行播放
@@ -116,6 +115,10 @@ void VideoChannel::video_decode() {
                 break;
             }
         }
+        while (frames.size() > 100 && isPlaying) {
+            av_usleep(1000 * 10);
+            continue;
+        }
         //将得到的图像放进去图像队列中
         frames.push(avFrame);
     }
@@ -150,12 +153,13 @@ void VideoChannel::video_render(){
         if (ret == 0){
             continue;
         }
+
         //avFrame->linesize 每一行存放的图像字节长度
         sws_scale(swsContext,avFrame->data,
-                avFrame->linesize,0,codecContext->height,
-                dst_data,dst_linesize);
-#if 1
+                  avFrame->linesize,0,codecContext->height,
+                  dst_data,dst_linesize);
 
+#if 1
         //这里音视频同步以 音频作为基准
         //获得当前帧avFrame画面的相对播放时间 (相对于开始播放的时间)，我们也可以通过pts来获得，但是一般在处理视频的情况不通过
         // pts来获得，通过best_effort_timestamp来获得，这两个有什么区别？其实大部分情况下这两个值是相等的，best_effort_timestamp
@@ -176,9 +180,15 @@ void VideoChannel::video_render(){
                 //音视频播放相差的间隔
                 double diff = video_frame_clock - audio_frame_clock;
                 if(diff > 0){
-                    //视频快了 就要让视频的这一帧数据睡得更久一点，就是更新画面慢一点
                     LOGE("视频快了：%lf",diff);
-                    av_usleep((delays + diff) * 1000000);
+                    //视频快了 就要让视频的这一帧数据睡得更久一点，就是更新画面慢一点
+                    if (diff > 1) {
+                        //差的太久了， 那只能慢慢赶 不然就是卡好久
+                        av_usleep((delays * 2) * 1000000);
+                    } else {
+                        //差的不多，尝试一次赶上去
+                        av_usleep((delays + diff) * 1000000);
+                    }
                 }else if (diff < 0){
                     //视频慢了 就要快点赶上音频
                     LOGE("视频慢了：%lf",diff);
@@ -207,12 +217,12 @@ void VideoChannel::video_render(){
                    av_usleep(delays * 1000000);
                 };
             }
-        }else{
-            //av_usleep(delays * 1000000);
         }
 #endif
+        if (callHelper && !audioChannel) {
+            callHelper->onProgress(THREAD_CHILD, video_frame_clock);
+        }
         releaseAVFrame(&avFrame);
-
         //通过上面的步骤，现在就转成了RGBA数据 存在了dst_data中,将转出来的数据回调出去进行播放
         //dst_data是一个指针数组，它将所有的数据都存储在第0个上面（123上面都没有数据的），所以我们直接将第0个回调出去即可，这就是为什么释放也只是释放第0个
         if(renderFrameCallback){
@@ -221,7 +231,6 @@ void VideoChannel::video_render(){
     }
     av_freep(&dst_data[0]);
     releaseAVFrame(&avFrame);
-
     isPlaying = 0;
     if(swsContext){
         sws_freeContext(swsContext);
@@ -232,9 +241,9 @@ void VideoChannel::video_render(){
 //这里没有什么太耗时的操作，就不用开线程进行处理了
 void VideoChannel::stop() {
     isPlaying = 0;
+    callHelper = 0;
     //这里调用setWork(0) 就会通知不会继续等待了，所以这里setWork(0)后从队列中取数据就不会卡住了
-    packets.setWork(0);
-    frames.setWork(0);
+    stopWork();
     pthread_join(pid_video_decode,0);
     pthread_join(pid_video_render,0);
 }

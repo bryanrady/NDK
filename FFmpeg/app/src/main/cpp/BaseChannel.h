@@ -6,6 +6,7 @@
 #define FFMPEG_BASECHANNEL_H
 
 #include "safe_queue.h"
+#include "JavaCallHelper.h"
 
 extern "C"{
 #include <libavcodec/avcodec.h>
@@ -14,7 +15,7 @@ extern "C"{
 //音频和视频的父类  用来处理音频和视频的相同操作
 class BaseChannel{
 public:
-    BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base);
+    BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,JavaCallHelper *callHelper);
     //父类的析构函数一定要设置成为虚函数，否则不会执行子类的析构函数，可能造成内存泄漏
     virtual ~BaseChannel();
 
@@ -28,13 +29,18 @@ public:
     virtual void play() = 0;
     virtual void stop() = 0;
 
+    void startWork();
+    void stopWork();
+    void clearQueue();
+
     int stream_id;
-    AVCodecContext *codecContext;
+    AVCodecContext *codecContext = 0;
     SafeQueue<AVPacket *> packets;  //存取经过解封装后得到的包
     SafeQueue<AVFrame *> frames;    //存取经过解码后的图像
     bool isPlaying; //判断是不是播放状态
     AVRational time_base;   //帧的基本时间单位
     double frameClock;
+    JavaCallHelper *callHelper = 0;
 };
 
 #endif //FFMPEG_BASECHANNEL_H

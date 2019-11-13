@@ -4,10 +4,11 @@
 
 #include "BaseChannel.h"
 
-BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base){
+BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,JavaCallHelper *callHelper){
     this->stream_id = stream_id;
     this->codecContext = codecContext;
     this->time_base = time_base;
+    this->callHelper = callHelper;
 
     packets.setReleaseCallback(BaseChannel::releaseAvPacket);
     //packets.setReleaseCallback2(BaseChannel::releaseAvPacket2);
@@ -15,13 +16,27 @@ BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational t
 }
 
 BaseChannel::~BaseChannel() {
-    packets.clear();
-    frames.clear();
     if(codecContext){
         avcodec_close(codecContext);
         avcodec_free_context(&codecContext);
         codecContext = 0;
     }
+    clearQueue();
+}
+
+void BaseChannel::startWork() {
+    packets.setWork(1);
+    frames.setWork(1);
+}
+
+void BaseChannel::stopWork() {
+    packets.setWork(0);
+    frames.setWork(0);
+}
+
+void BaseChannel::clearQueue() {
+    packets.clear();
+    frames.clear();
 }
 
 void BaseChannel::releaseAvPacket(AVPacket **packet) {
