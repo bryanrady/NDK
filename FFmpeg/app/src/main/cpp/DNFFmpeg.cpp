@@ -17,6 +17,8 @@ DNFFmpeg::DNFFmpeg(const char *data_source,JavaCallHelper *callHelper) {
 
     isPlaying = 0;
     duration = 0;
+    isSeek = 0;
+    isPause = 0;
     pthread_mutex_init(&seekMutex, 0);
 }
 
@@ -243,8 +245,15 @@ void DNFFmpeg::_start() {
         //锁住formatContext
         pthread_mutex_lock(&seekMutex);
         AVPacket *avPacket = av_packet_alloc();
+        //从媒体中读取音频包或者视频包
         int ret = av_read_frame(formatContext,avPacket);
         pthread_mutex_unlock(&seekMutex);
+        //其实这里不加也没关系，大不了seek的时候会重复播放一个画面
+        if(isSeek){
+            av_packet_free(&avPacket);
+            avPacket = 0;
+            continue;
+        }
         //0 if OK, < 0 on error or end of file
         if(ret == 0){
             //这里根据avPacket->stream_index(是一个流序号)和存进去的i来判断是音频包还是视频包
@@ -289,6 +298,7 @@ void DNFFmpeg::seek(int progress) {
     if (!formatContext) {
         return;
     }
+    isSeek = 1;
     pthread_mutex_lock(&seekMutex);
     //单位是 微妙
     int64_t seek = progress * 1000000;
@@ -312,4 +322,5 @@ void DNFFmpeg::seek(int progress) {
         videoChannel->startWork();
     }
     pthread_mutex_unlock(&seekMutex);
+    isSeek = 0;
 }

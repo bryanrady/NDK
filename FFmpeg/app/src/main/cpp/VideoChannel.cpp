@@ -160,6 +160,13 @@ void VideoChannel::video_render(){
                   dst_data,dst_linesize);
 
 #if 1
+
+        /**
+         *  seek需要注意的点：编码器中存在缓存
+         *  100s 的图像,用户seek到第 50s 的位置
+         *  音频是50s的音频，但是视频 你获得的是100s的视频
+         */
+
         //这里音视频同步以 音频作为基准
         //获得当前帧avFrame画面的相对播放时间 (相对于开始播放的时间)，我们也可以通过pts来获得，但是一般在处理视频的情况不通过
         // pts来获得，通过best_effort_timestamp来获得，这两个有什么区别？其实大部分情况下这两个值是相等的，best_effort_timestamp

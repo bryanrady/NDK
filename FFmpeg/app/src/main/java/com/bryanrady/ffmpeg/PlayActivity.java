@@ -20,6 +20,7 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
     private int mProgress;
     private boolean mIsTouch;
     private boolean mIsSeek;
+    private boolean mIsPause = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +56,16 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
     //    mDnPlayer.setDataSource("rtmp://58.200.131.2:1935/livetv/hunantv");
         mDnPlayer.setDataSource("/sdcard/aa1.mp4");
         mDnPlayer.setSurfaceView(mSurfaceView);
+
+        mSeekBar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mIsPause = !mIsPause;
+                if(mIsPause){
+                    mDnPlayer.pause();
+                }
+            }
+        });
     }
 
     @Override

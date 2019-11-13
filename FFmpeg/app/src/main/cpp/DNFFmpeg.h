@@ -44,6 +44,8 @@ private:
     bool isPlaying;
     RenderFrameCallback renderFrameCallback;
     int duration;
+    bool isSeek;
+    bool isPause;
     pthread_mutex_t seekMutex;
 };
 

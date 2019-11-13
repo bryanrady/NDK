@@ -78,6 +78,15 @@ public class DNPlayer implements SurfaceHolder.Callback {
         }.start();
     }
 
+    public void pause(){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                native_pause();
+            }
+        }).start();
+    }
+
     private void onError(int errorCode){
         if (mOnErrorListener!=null){
             mOnErrorListener.onError(errorCode);
@@ -170,6 +179,9 @@ public class DNPlayer implements SurfaceHolder.Callback {
 
     private native int native_get_duration();
 
+    //拖动进度条
     private native void native_seek(int progress);
 
+    //暂停
+    private native void native_pause();
 }
