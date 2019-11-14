@@ -14,14 +14,18 @@ DNFFmpeg::DNFFmpeg(const char *data_source,JavaCallHelper *callHelper) {
      this->dataSource = new char[strlen(data_source)+1];
      strcpy(this->dataSource,data_source);
      this->callHelper = callHelper;
-
-    pthread_mutex_init(&seekMutex, 0);
+     duration = 0;
+     isPlaying = 0;
+     isSeek = 0;
+     isPause = 0;
+     pthread_mutex_init(&seekMutex, 0);
 }
 
 //因为DNFFmpeg是在子线程中释放的，所以不能在析构函数中释放JavaCallHelper，因为JavaCallHelper的析构函数用到了主线程的env
 DNFFmpeg::~DNFFmpeg() {
     pthread_mutex_destroy(&seekMutex);
-    //DELETE(dataSource);
+    callHelper = 0;
+    DELETE(dataSource);
 }
 
 void* task_stop(void *args){
@@ -29,35 +33,34 @@ void* task_stop(void *args){
     dnfFmpeg->_stop();
     //这里是在子线程释放的DnfFmpeg
     DELETE(dnfFmpeg);
+    LOGE("释放");
     return 0;
 }
 
 void DNFFmpeg::stop() {
-    isPlaying = 0;
-    //这里释放callHelper必须在主线程中释放，因为JavaCallHelper的析构方法用到了主线程的env，
-    DELETE(callHelper);
+    callHelper = 0;
+    if (audioChannel) {
+        audioChannel->callHelper = 0;
+    }
+    if (videoChannel) {
+        videoChannel->callHelper = 0;
+    }
     pthread_create(&pid_stop,0,task_stop,this);
 }
 
 void DNFFmpeg::_stop(){
     //等待prepare线程结束后再去执行下面的操作
     pthread_join(pid_prepare,0);
+    isPlaying = 0;
     pthread_join(pid_start,0);
+    DELETE(audioChannel);
+    DELETE(videoChannel);
     //等待这两个线程结束后我们才能去释放AVFormatContext，因为这两个线程都会使用到formatContext,如果直接释放了，可能会有问题
     if(formatContext){
         //先关闭流的读取然后再释放
         avformat_close_input(&formatContext);
-        if(formatContext){
-            avformat_free_context(formatContext);
-            formatContext = 0;
-        }
-    }
-
-    if(audioChannel){
-        audioChannel->stop();
-    }
-    if(videoChannel){
-        videoChannel->stop();
+        avformat_free_context(formatContext);
+        formatContext = 0;
     }
     DELETE(audioChannel);
     DELETE(videoChannel);
@@ -229,6 +232,7 @@ void DNFFmpeg::start() {
  * 专门用来读取媒体数据包(音视频数据包) 解码放到专门的类VideoChannel来进行操作
  */
 void DNFFmpeg::_start() {
+    int ret = 0;
     while (isPlaying){
         //这里读取文件的时候可以做一下限制，如果读本地文件的时候一下子就读完了，可能会造成oom
         if(audioChannel && audioChannel->packets.size() > 100){
@@ -244,14 +248,14 @@ void DNFFmpeg::_start() {
         pthread_mutex_lock(&seekMutex);
         AVPacket *avPacket = av_packet_alloc();
         //从媒体中读取音频包或者视频包
-        int ret = av_read_frame(formatContext,avPacket);
+        ret = av_read_frame(formatContext,avPacket);
         pthread_mutex_unlock(&seekMutex);
         //其实这里不加也没关系，大不了seek的时候会重复播放一个画面
-        if(isSeek){
-            av_packet_free(&avPacket);
-            avPacket = 0;
-            continue;
-        }
+//        if(isSeek){
+//            av_packet_free(&avPacket);
+//            avPacket = 0;
+//            continue;
+//        }
         //0 if OK, < 0 on error or end of file
         if(ret == 0){
             //这里根据avPacket->stream_index(是一个流序号)和存进去的i来判断是音频包还是视频包
@@ -261,8 +265,8 @@ void DNFFmpeg::_start() {
                 videoChannel->packets.push(avPacket);
             }
         }else if(ret == AVERROR_EOF){   //读取完成了，但是可能还没有播放完
-            if(!audioChannel->packets.empty() && !audioChannel->frames.empty()
-               && !videoChannel->packets.empty() && !videoChannel->frames.empty()){
+            if(audioChannel->packets.empty() && audioChannel->frames.empty()
+               && videoChannel->packets.empty() && videoChannel->frames.empty()){
                 break;
             }
             //为什么这里要让它继续循环，而不是sleep

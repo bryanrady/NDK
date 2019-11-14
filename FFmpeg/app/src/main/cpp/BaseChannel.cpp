@@ -10,6 +10,8 @@ BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational t
     this->time_base = time_base;
     this->callHelper = callHelper;
 
+    isPlaying = 0;
+
     packets.setReleaseCallback(BaseChannel::releaseAvPacket);
     //packets.setReleaseCallback2(BaseChannel::releaseAvPacket2);
     frames.setReleaseCallback(BaseChannel::releaseAVFrame);

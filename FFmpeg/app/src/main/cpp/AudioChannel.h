@@ -20,7 +20,7 @@ public:
     ~AudioChannel();
 
     //输出缓冲区
-    uint8_t *output_data = 0;
+    uint8_t *output_buffer = 0;
 
     //音频解码与播放入口
     void play();

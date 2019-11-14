@@ -12,7 +12,7 @@ JavaCallHelper::JavaCallHelper(JavaVM *vm,JNIEnv *env,jobject instance) {
     //this->instance = instance;
     //如果涉及到跨方法/跨线程使用jobject,就要使用全局引用
     this->instance = env->NewGlobalRef(instance);
-    jclass dnPlayerCls = env->GetObjectClass(instance);
+    jclass dnPlayerCls = env->GetObjectClass(this->instance);
     this->onErrorMethodId = env->GetMethodID(dnPlayerCls,"onError","(I)V");
     this->onPreparedMethodId = env->GetMethodID(dnPlayerCls,"onPrepared","()V");
     this->onProgressMethodId = env->GetMethodID(dnPlayerCls, "onProgress", "(I)V");
@@ -21,6 +21,7 @@ JavaCallHelper::JavaCallHelper(JavaVM *vm,JNIEnv *env,jobject instance) {
 JavaCallHelper::~JavaCallHelper() {
     if(instance){
         env->DeleteGlobalRef(instance);
+        instance = 0;
     }
 }
 

@@ -13,15 +13,15 @@ AudioChannel::AudioChannel(int stream_id,AVCodecContext *codecContext,AVRational
     out_16_samplesize = av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
     out_sample_rate = 44100;    //采样率
     //采样率44100  44100 * 2表示多少个16位数据 44100 * 2(16位) * 2(声道数)     44100 * 2(16位)代表1个16位数据
-    output_data = static_cast<uint8_t *>(malloc(out_sample_rate * out_16_samplesize * out_channels));
+    output_buffer = static_cast<uint8_t *>(malloc(out_sample_rate * out_16_samplesize * out_channels));
     //记得free
-    memset(output_data,0,out_sample_rate * out_16_samplesize * out_channels);
+    memset(output_buffer,0,out_sample_rate * out_16_samplesize * out_channels);
 }
 
 AudioChannel::~AudioChannel() {
-    if (output_data){
-        free(output_data);
-        output_data = 0;
+    if (output_buffer){
+        free(output_buffer);
+        output_buffer = 0;
     }
 }
 
@@ -33,10 +33,6 @@ void AudioChannel::stop() {
     stopWork();
     pthread_join(pid_audio_decode,0);
     pthread_join(pid_audio_play,0);
-    if(swrContext){
-        swr_free(&swrContext);
-        swrContext = 0;
-    }
 
     //设置停止状态
     if (bqPlayerInterface) {
@@ -58,6 +54,11 @@ void AudioChannel::stop() {
         (*engineObject)->Destroy(engineObject);
         engineObject = 0;
         engineInterface = 0;
+    }
+
+    if(swrContext){
+        swr_free(&swrContext);
+        swrContext = 0;
     }
 
 }
@@ -83,10 +84,10 @@ void AudioChannel::play() {
     //切记初始化swrContext 这里开始没有进行初始化，导致没有声音
     swr_init(swrContext);
 
-    //设置为正在播放
-    isPlaying = 1;
     //将队列设置为工作状态
     startWork();
+    //设置为正在播放
+    isPlaying = 1;
 
     //开启一个线程来进行解码
     pthread_create(&pid_audio_decode,0,task_audio_decode,this);
@@ -113,7 +114,7 @@ void AudioChannel::audio_decode() {
             if (ret == AVERROR(EAGAIN)){
                 //这里的AVERROR(EAGAIN)意思是:丢给解码器里面的数据太多了，叫我们马上进行读取，以便于给解码器腾出空间继续解码新数据,
                 //所以这里我们直接进行读取就行了，和成功的操作一样,所以这里可以直接不管
-            }else{
+            }else if (ret < 0){
                 break;
             }
         }
@@ -125,7 +126,7 @@ void AudioChannel::audio_decode() {
             if (ret == AVERROR(EAGAIN)){
                 //这里的AVERROR(EAGAIN)意思是:从解码器中读取的数据包太少，导致不够生成一段图像，需要更多的数据包才能生存图像
                 continue;
-            }else{
+            }else if (ret < 0){
                 break;
             }
         }
@@ -167,7 +168,7 @@ int AudioChannel::getPcm() {
         int64_t output_max_samples = av_rescale_rnd(avFrame->nb_samples+delays,out_sample_rate,avFrame->sample_rate,AV_ROUND_UP);
         //swrContext上下文+输出缓冲区+输出缓冲区能接受的最大数据量+输入数据+输入数据个数
         //返回真正转换的多少个数据  samples单位: 44100*2(声道数)
-        int samples = swr_convert(swrContext, &output_data, output_max_samples, (const uint8_t **)(avFrame->data),avFrame->nb_samples);
+        int samples = swr_convert(swrContext, &output_buffer, output_max_samples, (const uint8_t **)(avFrame->data),avFrame->nb_samples);
         //获得多少个16位数据  ==  samples * out_samplesize * 声道数   16位数据就是2个字节数据
         //获得多少个字节大小  ==  samples * out_samplesize * 声道数 * 2
         //获取out_channels个声道输出的16位数据
@@ -177,7 +178,6 @@ int AudioChannel::getPcm() {
         //获得音频 相对播放这一段AVFrame数据的秒数
         //frameClock = avFrame->pts * av_q2d(time_base);
         frameClock = avFrame->best_effort_timestamp * av_q2d(time_base);
-        LOGE("音频 frameClock: %d",frameClock);
         if (callHelper) {
             callHelper->onProgress(THREAD_CHILD, frameClock);
         }
@@ -193,7 +193,7 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bqInterface, void *context) 
     int dataSize = channel->getPcm();
     if(dataSize > 0 ){
         // 将pcm数据通过队列接口加入到队列中，就会自动播放了，接收16位数据
-        (*bqInterface)->Enqueue(bqInterface,channel->output_data,dataSize);
+        (*bqInterface)->Enqueue(bqInterface,channel->output_buffer,dataSize);
     }
 }
 

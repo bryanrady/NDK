@@ -39,7 +39,7 @@ public:
     SafeQueue<AVFrame *> frames;    //存取经过解码后的图像
     bool isPlaying; //判断是不是播放状态
     AVRational time_base;   //帧的基本时间单位
-    double frameClock;
+    double frameClock = 0;
     JavaCallHelper *callHelper = 0;
 };
 

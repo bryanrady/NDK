@@ -71,10 +71,10 @@ void* task_video_render(void *args){
 }
 
 void VideoChannel::play() {
-    //设置为正在播放
-    isPlaying = 1;
     //将队列设置为工作状态
     startWork();
+    //设置为正在播放
+    isPlaying = 1;
     //开启一个线程来进行解码
     pthread_create(&pid_video_decode,0,task_video_decode,this);
     //开启一个线程来进行播放
@@ -99,7 +99,7 @@ void VideoChannel::video_decode() {
             if (ret == AVERROR(EAGAIN)){
                 //这里的AVERROR(EAGAIN)意思是:丢给解码器里面的数据太多了，叫我们马上进行读取，以便于给解码器腾出空间继续解码新数据,
                 //所以这里我们直接进行读取就行了，和成功的操作一样,所以这里可以直接不管
-            }else{
+            }else if (ret < 0){
                 break;
             }
         }
@@ -111,7 +111,7 @@ void VideoChannel::video_decode() {
             if (ret == AVERROR(EAGAIN)){
                 //这里的AVERROR(EAGAIN)意思是:从解码器中读取的数据包太少，导致不够生成一段图像，需要更多的数据包才能生存图像
                 continue;
-            }else{
+            }else if (ret < 0){
                 break;
             }
         }
@@ -147,17 +147,14 @@ void VideoChannel::video_render(){
     while (isPlaying){
         int ret = frames.pop(avFrame);
         if (!isPlaying){
-            releaseAVFrame(&avFrame);
+            if(ret != 0){
+                releaseAVFrame(&avFrame);
+            }
             break;
         }
         if (ret == 0){
             continue;
         }
-
-        //avFrame->linesize 每一行存放的图像字节长度
-        sws_scale(swsContext,avFrame->data,
-                  avFrame->linesize,0,codecContext->height,
-                  dst_data,dst_linesize);
 
 #if 1
 
@@ -171,17 +168,16 @@ void VideoChannel::video_render(){
         //获得当前帧avFrame画面的相对播放时间 (相对于开始播放的时间)，我们也可以通过pts来获得，但是一般在处理视频的情况不通过
         // pts来获得，通过best_effort_timestamp来获得，这两个有什么区别？其实大部分情况下这两个值是相等的，best_effort_timestamp
         // 比pts参考了更多的情况，比pts更加精准的来代表我们当前画面的相对播放时间
-        double video_frame_clock;
         if (avFrame->best_effort_timestamp == AV_NOPTS_VALUE) {
-            video_frame_clock = 0;
+            frameClock = 0;
         }else{
-            video_frame_clock = avFrame->best_effort_timestamp * av_q2d(time_base);
+            frameClock = avFrame->best_effort_timestamp * av_q2d(time_base);
         }
         //额外的间隔时间 repeat_pict 这个东西是当我们在进行解码操作的时候，这个图像需要延迟多久才显示，所以需要加上这个延迟
         double extra_delay = avFrame->repeat_pict / (2*fps);
         // 真实需要的间隔时间
         double delays = extra_delay + frame_delays;
-
+        double video_frame_clock = frameClock;
         //如果第一个图像出来的时候，video_frame_clock可能为0，那就以正常的时间间隔来进行播放正常播放
         if (video_frame_clock == 0) {
             av_usleep(delays * 1000000);
@@ -235,8 +231,14 @@ void VideoChannel::video_render(){
         }
 #endif
         if (callHelper && !audioChannel) {
-            callHelper->onProgress(THREAD_CHILD, video_frame_clock);
+            callHelper->onProgress(THREAD_CHILD, frameClock);
         }
+
+        //avFrame->linesize 每一行存放的图像字节长度
+        sws_scale(swsContext,avFrame->data,
+                  avFrame->linesize,0,avFrame->height,
+                  dst_data,dst_linesize);
+
         //通过上面的步骤，现在就转成了RGBA数据 存在了dst_data中,将转出来的数据回调出去进行播放
         //dst_data是一个指针数组，它将所有的数据都存储在第0个上面（123上面都没有数据的），所以我们直接将第0个回调出去即可，这就是为什么释放也只是释放第0个
         if(renderFrameCallback){

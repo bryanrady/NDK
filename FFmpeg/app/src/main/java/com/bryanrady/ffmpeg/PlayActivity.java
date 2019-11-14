@@ -54,7 +54,7 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
         mDnPlayer.setOnProgressListener(this);
     //    mDnPlayer.setDataSource("rtmp://192.168.1.100:1935/live/wqb");
     //    mDnPlayer.setDataSource("rtmp://58.200.131.2:1935/livetv/hunantv");
-        mDnPlayer.setDataSource("/sdcard/aa3.mp4");
+        mDnPlayer.setDataSource("/sdcard/aa4.mp4");
         mDnPlayer.setSurfaceView(mSurfaceView);
 
         mSeekBar.setOnClickListener(new View.OnClickListener() {
@@ -176,8 +176,6 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
         mIsSeek = true;
         mIsTouch = false;
         mProgress = mDnPlayer.getDuration() * seekBar.getProgress() / 100;
-        Log.e("wangqingbin","mDnPlayer.getDuration()=="+mDnPlayer.getDuration());
-        Log.e("wangqingbin","mProgress=="+mProgress);
         //进度调整
         mDnPlayer.seek(mProgress);
     }
