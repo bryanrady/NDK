@@ -160,23 +160,27 @@ int AudioChannel::getPcm() {
     // 注意: 不是输入了多少数据，我们播放器就马上会处理这么多个数据
     // 假设我们输入了10个数据 ，swrContext转码器 这一次处理了8个数据，还剩下2个，所以我们要把上一次未处理的2个也添加进来
     // delays 就代表剩下的数据，那么如果不加delays(上次没处理完的数据) , 会造成积压, 然后会导致崩栈
-    int64_t delays = swr_get_delay(swrContext,avFrame->sample_rate);
-    // 将 nb_samples 个数据 由 sample_rate采样率转成 44100 后 返回output_max_samples个数据  相当于 m 个 nb_samples = output_max_samples 个 44100；
-    // AV_ROUND_UP : 向上取整 1.1 = 2
-    int64_t output_max_samples = av_rescale_rnd(avFrame->nb_samples+delays,out_sample_rate,avFrame->sample_rate,AV_ROUND_UP);
-    //swrContext上下文+输出缓冲区+输出缓冲区能接受的最大数据量+输入数据+输入数据个数
-    //返回真正转换的多少个数据  samples单位: 44100*2(声道数)
-    int samples = swr_convert(swrContext, &output_data, output_max_samples, (const uint8_t **)(avFrame->data),avFrame->nb_samples);
-    //获得多少个16位数据  ==  samples * out_samplesize * 声道数   16位数据就是2个字节数据
-    //获得多少个字节大小  ==  samples * out_samplesize * 声道数 * 2
-    //获取out_channels个声道输出的16位数据
-    dataSize = samples * out_16_samplesize * out_channels;
+    if(swrContext && avFrame){
+        int64_t delays = swr_get_delay(swrContext,avFrame->sample_rate);
+        // 将 nb_samples 个数据 由 sample_rate采样率转成 44100 后 返回output_max_samples个数据  相当于 m 个 nb_samples = output_max_samples 个 44100；
+        // AV_ROUND_UP : 向上取整 1.1 = 2
+        int64_t output_max_samples = av_rescale_rnd(avFrame->nb_samples+delays,out_sample_rate,avFrame->sample_rate,AV_ROUND_UP);
+        //swrContext上下文+输出缓冲区+输出缓冲区能接受的最大数据量+输入数据+输入数据个数
+        //返回真正转换的多少个数据  samples单位: 44100*2(声道数)
+        int samples = swr_convert(swrContext, &output_data, output_max_samples, (const uint8_t **)(avFrame->data),avFrame->nb_samples);
+        //获得多少个16位数据  ==  samples * out_samplesize * 声道数   16位数据就是2个字节数据
+        //获得多少个字节大小  ==  samples * out_samplesize * 声道数 * 2
+        //获取out_channels个声道输出的16位数据
+        dataSize = samples * out_16_samplesize * out_channels;
 
-    //pts  获得当前帧AVFrame 的一个相对播放时间 (相对开始播放的时间)
-    //获得音频 相对播放这一段AVFrame数据的秒数
-    frameClock = avFrame->pts * av_q2d(time_base);
-    if (callHelper) {
-        callHelper->onProgress(THREAD_CHILD, frameClock);
+        //pts  获得当前帧AVFrame 的一个相对播放时间 (相对开始播放的时间)
+        //获得音频 相对播放这一段AVFrame数据的秒数
+        //frameClock = avFrame->pts * av_q2d(time_base);
+        frameClock = avFrame->best_effort_timestamp * av_q2d(time_base);
+        LOGE("音频 frameClock: %d",frameClock);
+        if (callHelper) {
+            callHelper->onProgress(THREAD_CHILD, frameClock);
+        }
     }
     releaseAVFrame(&avFrame);
     return dataSize;

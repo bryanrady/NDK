@@ -15,17 +15,13 @@ DNFFmpeg::DNFFmpeg(const char *data_source,JavaCallHelper *callHelper) {
      strcpy(this->dataSource,data_source);
      this->callHelper = callHelper;
 
-    isPlaying = 0;
-    duration = 0;
-    isSeek = 0;
-    isPause = 0;
     pthread_mutex_init(&seekMutex, 0);
 }
 
 //因为DNFFmpeg是在子线程中释放的，所以不能在析构函数中释放JavaCallHelper，因为JavaCallHelper的析构函数用到了主线程的env
 DNFFmpeg::~DNFFmpeg() {
-    DELETE(dataSource);
     pthread_mutex_destroy(&seekMutex);
+    //DELETE(dataSource);
 }
 
 void* task_stop(void *args){
@@ -51,8 +47,10 @@ void DNFFmpeg::_stop(){
     if(formatContext){
         //先关闭流的读取然后再释放
         avformat_close_input(&formatContext);
-        avformat_free_context(formatContext);
-        formatContext = 0;
+        if(formatContext){
+            avformat_free_context(formatContext);
+            formatContext = 0;
+        }
     }
 
     if(audioChannel){
@@ -288,7 +286,7 @@ int DNFFmpeg::getDuration() {
 }
 
 void DNFFmpeg::seek(int progress) {
-//进去必须 在0- duration 范围之类
+//进去必须 在0 - duration 范围之类
     if (progress< 0 || progress >= duration) {
         return;
     }

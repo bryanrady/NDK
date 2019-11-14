@@ -19,16 +19,20 @@ JavaCallHelper::JavaCallHelper(JavaVM *vm,JNIEnv *env,jobject instance) {
 }
 
 JavaCallHelper::~JavaCallHelper() {
-    env->DeleteGlobalRef(instance);
+    if(instance){
+        env->DeleteGlobalRef(instance);
+    }
 }
 
 void JavaCallHelper::onError(int thread, int errorCode) {
     if(thread == THREAD_MAIN){
         //可以直接使用env
-        env->CallVoidMethod(instance,onErrorMethodId,errorCode);
+        if(instance){
+            env->CallVoidMethod(instance,onErrorMethodId,errorCode);
+        }
     }else{
         //把当前native线程附加到java 虚拟机中
-        if (vm){
+        if(instance){
             //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
             JNIEnv *env = 0;
             jint ret = vm->AttachCurrentThread(&env,0);
@@ -43,10 +47,12 @@ void JavaCallHelper::onError(int thread, int errorCode) {
 void JavaCallHelper::onPrepared(int thread) {
     if(thread == THREAD_MAIN){
         //可以直接使用env
-        env->CallVoidMethod(instance,onPreparedMethodId);
+        if(instance){
+            env->CallVoidMethod(instance,onPreparedMethodId);
+        }
     }else{
         //把当前native线程附加到java 虚拟机中
-        if (vm){
+        if(instance){
             //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
             JNIEnv *env = 0;
             jint ret = vm->AttachCurrentThread(&env,0);
@@ -60,12 +66,15 @@ void JavaCallHelper::onPrepared(int thread) {
 }
 
 void JavaCallHelper::onProgress(int thread, int progress) {
+
     if(thread == THREAD_MAIN){
         //可以直接使用env
-        env->CallVoidMethod(instance,onProgressMethodId,progress);
+        if(instance){
+            env->CallVoidMethod(instance,onProgressMethodId,progress);
+        }
     }else{
         //把当前native线程附加到java 虚拟机中
-        if (vm){
+        if (instance){
             //子线程中需要借助JavaVM获得属于当前线程的JNIEnv
             JNIEnv *env = 0;
             jint ret = vm->AttachCurrentThread(&env,0);

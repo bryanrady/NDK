@@ -1,9 +1,11 @@
 package com.bryanrady.ffmpeg;
 
+import android.os.Looper;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.widget.Toast;
 
 /**
  * 提供Java层播放器功能 播放与停止
@@ -148,7 +150,9 @@ public class DNPlayer implements SurfaceHolder.Callback {
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         //画布发生改变了，我们就要把改变的画布传给native
-        native_set_surface(holder.getSurface());
+        if(Looper.myLooper() == Looper.getMainLooper()){    //如果当前线程是主线程,则进行UI操作
+            native_set_surface(holder.getSurface());
+        }
     }
 
     /**

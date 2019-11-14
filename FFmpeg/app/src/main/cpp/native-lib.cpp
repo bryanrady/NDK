@@ -126,6 +126,6 @@ Java_com_bryanrady_ffmpeg_DNPlayer_native_1seek(JNIEnv *env, jobject instance, j
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_bryanrady_ffmpeg_DNPlayer_native_1pause(JNIEnv *env, jobject thiz) {
+Java_com_bryanrady_ffmpeg_DNPlayer_native_1pause(JNIEnv *env, jobject instance) {
     // TODO: implement native_pause()
 }

@@ -171,23 +171,28 @@ void VideoChannel::video_render(){
         //获得当前帧avFrame画面的相对播放时间 (相对于开始播放的时间)，我们也可以通过pts来获得，但是一般在处理视频的情况不通过
         // pts来获得，通过best_effort_timestamp来获得，这两个有什么区别？其实大部分情况下这两个值是相等的，best_effort_timestamp
         // 比pts参考了更多的情况，比pts更加精准的来代表我们当前画面的相对播放时间
-        double video_frame_clock = avFrame->best_effort_timestamp * av_q2d(time_base);
+        double video_frame_clock;
+        if (avFrame->best_effort_timestamp == AV_NOPTS_VALUE) {
+            video_frame_clock = 0;
+        }else{
+            video_frame_clock = avFrame->best_effort_timestamp * av_q2d(time_base);
+        }
         //额外的间隔时间 repeat_pict 这个东西是当我们在进行解码操作的时候，这个图像需要延迟多久才显示，所以需要加上这个延迟
         double extra_delay = avFrame->repeat_pict / (2*fps);
         // 真实需要的间隔时间
         double delays = extra_delay + frame_delays;
 
-        if (audioChannel){
-            //如果第一个图像出来的时候，video_frame_clock可能为0，那就以正常的时间间隔来进行播放正常播放
-            if (video_frame_clock == 0) {
-                av_usleep(delays * 1000000);
-            }else{
-                //获得音频的相对播放时间 s
-                double audio_frame_clock = audioChannel->frameClock;
-                //音视频播放相差的间隔
-                double diff = video_frame_clock - audio_frame_clock;
+        //如果第一个图像出来的时候，video_frame_clock可能为0，那就以正常的时间间隔来进行播放正常播放
+        if (video_frame_clock == 0) {
+            av_usleep(delays * 1000000);
+        }else{
+            //获得音频的相对播放时间 s
+            double audio_frame_clock = audioChannel ? audioChannel->frameClock : 0;
+            //音视频播放相差的间隔
+            double diff = video_frame_clock - audio_frame_clock;
+            if(audioChannel){
                 if(diff > 0){
-                    LOGE("视频快了：%lf",diff);
+                    //LOGE("视频快了：%lf",diff);
                     //视频快了 就要让视频的这一帧数据睡得更久一点，就是更新画面慢一点
                     if (diff > 1) {
                         //差的太久了， 那只能慢慢赶 不然就是卡好久
@@ -196,9 +201,9 @@ void VideoChannel::video_render(){
                         //差的不多，尝试一次赶上去
                         av_usleep((delays + diff) * 1000000);
                     }
-                }else if (diff < 0){
+                }else{
                     //视频慢了 就要快点赶上音频
-                    LOGE("视频慢了：%lf",diff);
+                    //LOGE("视频慢了：%lf",diff);
                     //有种情况：可能音频快了，要播放的视频包积压太多，赶不上音频了，如果这里进行音频睡眠的话，就会造成延迟越来越高，
                     //可能直播播到了第5，但是因为休眠的话可能还在播第2个，就会有很高的延迟，所以我们就要来丢包 丢视频包
                     //在丢包 AVPackeg包的时候，只能丢B帧跟P帧，不能丢I帧.如果丢掉了I帧，那么P帧和B帧的数据就解码不出来
@@ -207,34 +212,37 @@ void VideoChannel::video_render(){
                     // 因为P帧要解码的话，需要参考I帧的数据，B帧在解码的时候需要参考I帧和P帧的数据，I帧保存的是完整的图像数据
                     //所以I帧的数据两最大，P帧第2，B帧第3
                     //但是在解码的时间上 解码I帧花费时间最少，P帧其次，B帧最后
-                    if(fabs(diff) >= 0.05){ //绝对值
-                        LOGE("视频慢了开始丢包");
+                    if(fabs(diff) > 1){
+                        //一种可能： 快进了(因为解码器中有缓存数据，这样获得的avframe就和seek的匹配了)
+                    }else if(fabs(diff) >= 0.05){ //绝对值
+                        //视频慢了 0.05s 已经比较明显了 (丢帧)
+                        //LOGE("视频慢了开始丢包");
                         releaseAVFrame(&avFrame);
-                        //丢包 调用队列的这个方法就会回调到队列的setSyncHandle()
+                        //执行同步操作 删除到最近的key frame  丢包 调用队列的这个方法就会回调到队列的setSyncHandle()
                         frames.sync();
                         continue;
-                    //    packets.sync();
+                        //    packets.sync();
                     }else{
-                        //在允许的范围之内
-                        av_usleep(delays * 1000000);
+                        //误差在0.05之内 在允许的范围之内
+                        //不休眠 加快速度赶上去
                     }
-                }else{
-                    //相等的话 以正常的时间间隔来进行播放正常播放
-                   // LOGE("音视频播放时间间隔相等");
-                   av_usleep(delays * 1000000);
-                };
+                }
+            }else{
+                //正常播放
+                av_usleep(delays * 1000000);
             }
+
         }
 #endif
         if (callHelper && !audioChannel) {
             callHelper->onProgress(THREAD_CHILD, video_frame_clock);
         }
-        releaseAVFrame(&avFrame);
         //通过上面的步骤，现在就转成了RGBA数据 存在了dst_data中,将转出来的数据回调出去进行播放
         //dst_data是一个指针数组，它将所有的数据都存储在第0个上面（123上面都没有数据的），所以我们直接将第0个回调出去即可，这就是为什么释放也只是释放第0个
         if(renderFrameCallback){
             renderFrameCallback(dst_data[0],dst_linesize[0],codecContext->width,codecContext->height);
         }
+        releaseAVFrame(&avFrame);
     }
     av_freep(&dst_data[0]);
     releaseAVFrame(&avFrame);
