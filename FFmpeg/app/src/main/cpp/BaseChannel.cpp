@@ -3,6 +3,7 @@
 //
 
 #include "BaseChannel.h"
+#include "macro.h"
 
 BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational time_base,JavaCallHelper *callHelper){
     this->stream_id = stream_id;
@@ -11,6 +12,9 @@ BaseChannel::BaseChannel(int stream_id,AVCodecContext *codecContext,AVRational t
     this->callHelper = callHelper;
 
     isPlaying = 0;
+    isPause = 0;
+    pthread_mutex_init(&pauseMutex, 0);
+    pthread_cond_init(&pauseCond,0);
 
     packets.setReleaseCallback(BaseChannel::releaseAvPacket);
     //packets.setReleaseCallback2(BaseChannel::releaseAvPacket2);
@@ -24,6 +28,8 @@ BaseChannel::~BaseChannel() {
         codecContext = 0;
     }
     clearQueue();
+    pthread_mutex_destroy(&pauseMutex);
+    pthread_cond_destroy(&pauseCond);
 }
 
 void BaseChannel::startWork() {
@@ -64,4 +70,18 @@ void BaseChannel::releaseAVFrame(AVFrame **avFrame) {
         av_frame_free(avFrame);
         *avFrame = 0;
     }
+}
+
+void BaseChannel::pause() {
+    pthread_mutex_lock(&pauseMutex);
+    if(isPause == 0){
+        isPause = 1;
+    }else{
+        isPause = 0;
+    }
+    LOGE("isPause11 %d",isPause);
+    if(isPause==0){
+        pthread_cond_signal(&pauseCond);
+    }
+    pthread_mutex_unlock(&pauseMutex);
 }

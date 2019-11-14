@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
@@ -15,6 +16,7 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
 
     private SurfaceView mSurfaceView;
     private SeekBar mSeekBar;
+    private Button mBtnPause;
     private DNPlayer mDnPlayer;
 
     private int mProgress;
@@ -29,6 +31,7 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
         setContentView(R.layout.activity_play);
         mSurfaceView = findViewById(R.id.surfaceView);
         mSeekBar = findViewById(R.id.seekBar);
+        mBtnPause = findViewById(R.id.btn_pause_play);
         mSeekBar.setOnSeekBarChangeListener(this);
 
 //        rtmp测试地址（可用）
@@ -54,16 +57,20 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
         mDnPlayer.setOnProgressListener(this);
     //    mDnPlayer.setDataSource("rtmp://192.168.1.100:1935/live/wqb");
     //    mDnPlayer.setDataSource("rtmp://58.200.131.2:1935/livetv/hunantv");
-        mDnPlayer.setDataSource("/sdcard/aa4.mp4");
+        mDnPlayer.setDataSource("/sdcard/aa1.mp4");
         mDnPlayer.setSurfaceView(mSurfaceView);
 
-        mSeekBar.setOnClickListener(new View.OnClickListener() {
+        mBtnPause.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                mIsPause = !mIsPause;
-//                if(mIsPause){
-//                    mDnPlayer.pause();
-//                }
+                mIsPause = !mIsPause;
+                if(mIsPause){
+                    mDnPlayer.pause();
+                    mBtnPause.setText("播放");
+                }else{
+                    mDnPlayer.pause();
+                    mBtnPause.setText("暂停");
+                }
             }
         });
     }

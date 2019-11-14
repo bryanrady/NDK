@@ -32,6 +32,7 @@ public:
     void startWork();
     void stopWork();
     void clearQueue();
+    void pause();
 
     int stream_id;
     AVCodecContext *codecContext = 0;
@@ -41,6 +42,9 @@ public:
     AVRational time_base;   //帧的基本时间单位
     double frameClock = 0;
     JavaCallHelper *callHelper = 0;
+    bool isPause;
+    pthread_mutex_t pauseMutex;
+    pthread_cond_t pauseCond;
 };
 
 #endif //FFMPEG_BASECHANNEL_H

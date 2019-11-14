@@ -17,8 +17,8 @@ DNFFmpeg::DNFFmpeg(const char *data_source,JavaCallHelper *callHelper) {
      duration = 0;
      isPlaying = 0;
      isSeek = 0;
-     isPause = 0;
      pthread_mutex_init(&seekMutex, 0);
+
 }
 
 //因为DNFFmpeg是在子线程中释放的，所以不能在析构函数中释放JavaCallHelper，因为JavaCallHelper的析构函数用到了主线程的env
@@ -246,9 +246,11 @@ void DNFFmpeg::_start() {
         }
         //锁住formatContext
         pthread_mutex_lock(&seekMutex);
+
         AVPacket *avPacket = av_packet_alloc();
         //从媒体中读取音频包或者视频包
         ret = av_read_frame(formatContext,avPacket);
+
         pthread_mutex_unlock(&seekMutex);
         //其实这里不加也没关系，大不了seek的时候会重复播放一个画面
 //        if(isSeek){
@@ -325,4 +327,13 @@ void DNFFmpeg::seek(int progress) {
     }
     pthread_mutex_unlock(&seekMutex);
     isSeek = 0;
+}
+
+void DNFFmpeg::pause() {
+    if (audioChannel) {
+        audioChannel->pause();
+    }
+    if (videoChannel) {
+        videoChannel->pause();
+    }
 }

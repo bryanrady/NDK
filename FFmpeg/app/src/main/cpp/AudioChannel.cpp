@@ -144,6 +144,15 @@ void AudioChannel::audio_decode() {
 
 //从frames队列获取pcm数据，返回获取到的pcm数据大小
 int AudioChannel::getPcm() {
+
+    pthread_mutex_lock(&pauseMutex);
+    LOGE("isPause %d",isPause);
+    if(isPause){
+        LOGE("音频执行wait");
+        pthread_cond_wait(&pauseCond,&pauseMutex);
+    }
+    pthread_mutex_unlock(&pauseMutex);
+
     int dataSize = 0;
     AVFrame *avFrame = 0;
     int ret = frames.pop(avFrame);

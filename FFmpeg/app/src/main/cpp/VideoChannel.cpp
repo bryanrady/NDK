@@ -145,6 +145,15 @@ void VideoChannel::video_render(){
     double frame_delays = 1.0/fps;
 
     while (isPlaying){
+
+        pthread_mutex_lock(&pauseMutex);
+        LOGE("isPause %d",isPause);
+        if(isPause){
+            LOGE("视频执行wait");
+            pthread_cond_wait(&pauseCond,&pauseMutex);
+        }
+        pthread_mutex_unlock(&pauseMutex);
+
         int ret = frames.pop(avFrame);
         if (!isPlaying){
             if(ret != 0){

@@ -32,6 +32,8 @@ public:
 
     void seek(int progress);
 
+    void pause();
+
 private:
     char *dataSource;
     pthread_t pid_prepare;
@@ -45,7 +47,6 @@ private:
     RenderFrameCallback renderFrameCallback;
     int duration;
     bool isSeek;
-    bool isPause;
     pthread_mutex_t seekMutex;
 };
 
