@@ -145,15 +145,6 @@ void VideoChannel::video_render(){
     double frame_delays = 1.0/fps;
 
     while (isPlaying){
-
-        pthread_mutex_lock(&pauseMutex);
-        LOGE("isPause %d",isPause);
-        if(isPause){
-            LOGE("视频执行wait");
-            pthread_cond_wait(&pauseCond,&pauseMutex);
-        }
-        pthread_mutex_unlock(&pauseMutex);
-
         int ret = frames.pop(avFrame);
         if (!isPlaying){
             if(ret != 0){
@@ -247,6 +238,17 @@ void VideoChannel::video_render(){
         sws_scale(swsContext,avFrame->data,
                   avFrame->linesize,0,avFrame->height,
                   dst_data,dst_linesize);
+
+        pthread_mutex_lock(&pauseMutex);
+        LOGE("isPause %d",isPause);
+        if(isPause){
+            LOGE("视频执行wait");
+            //可以在这里通过AVFrame将当前显示的图像返回给java,不晓得能不能
+            //uint8_t *data = dst_data[0];
+
+            pthread_cond_wait(&pauseCond,&pauseMutex);
+        }
+        pthread_mutex_unlock(&pauseMutex);
 
         //通过上面的步骤，现在就转成了RGBA数据 存在了dst_data中,将转出来的数据回调出去进行播放
         //dst_data是一个指针数组，它将所有的数据都存储在第0个上面（123上面都没有数据的），所以我们直接将第0个回调出去即可，这就是为什么释放也只是释放第0个

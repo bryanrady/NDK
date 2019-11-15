@@ -31,7 +31,6 @@ void render(uint8_t *data,int linesize,int width,int height){
     }
     //设置窗口属性
     ANativeWindow_setBuffersGeometry(nativeWindow,width,height,WINDOW_FORMAT_RGBA_8888);
-    //这里不知道为什么ANativeWindow_Buffer不能用指针,用指针就会崩溃
     ANativeWindow_Buffer nativeWindow_Buffer;
     if(ANativeWindow_lock(nativeWindow, &nativeWindow_Buffer, 0) != 0){
         ANativeWindow_release(nativeWindow);
