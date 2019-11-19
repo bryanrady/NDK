@@ -1,30 +1,53 @@
 package com.bryanrady.rtmp;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.hardware.Camera;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.SurfaceView;
+import android.view.View;
 import android.widget.TextView;
+
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Used to load the 'native-lib' library on application startup.
-    static {
-        System.loadLibrary("native-lib");
-    }
+    private LivePusher mLivePusher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Example of a call to a native method
-        TextView tv = findViewById(R.id.sample_text);
-        tv.setText(stringFromJNI());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {//如果 API level 是大于等于 23(Android 6.0) 时
+            //判断是否具有权限
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},
+                        0);
+            }
+        }
+
+        SurfaceView surfaceView = findViewById(R.id.surfaceView);
+        mLivePusher = new LivePusher(this, 800, 480, 800_000, 10, Camera.CameraInfo.CAMERA_FACING_BACK);
+        //设置摄像头预览的界面
+        mLivePusher.setPreviewDisplay(surfaceView.getHolder());
     }
 
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
+    public void switchCamera(View view) {
+        mLivePusher.switchCamera();
+    }
+
+    public void startLive(View view) {
+        mLivePusher.startLive("rtmp://47.75.90.219/myapp/mystream");
+    }
+
+    public void stopLive(View view) {
+        mLivePusher.stopLive();
+    }
+
 }
