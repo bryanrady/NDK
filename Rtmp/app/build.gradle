@@ -5,7 +5,7 @@ android {
     buildToolsVersion "29.0.2"
     defaultConfig {
         applicationId "com.bryanrady.rtmp"
-        minSdkVersion 19
+        minSdkVersion 17
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
@@ -13,6 +13,7 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags ""
+                abiFilters "armeabi-v7a"
             }
         }
     }
@@ -24,7 +25,7 @@ android {
     }
     externalNativeBuild {
         cmake {
-            path "src/main/cpp/CMakeLists.txt"
+            path "CMakeLists.txt"
             version "3.10.2"
         }
     }
