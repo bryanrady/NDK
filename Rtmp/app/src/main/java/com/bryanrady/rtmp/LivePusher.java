@@ -35,6 +35,7 @@ public class LivePusher {
     }
 
     public void startLive(String path) {
+        //开始直播，进行连接服务器操作
         native_start(path);
         mVideoChannel.startLive();
         mAudioChannel.startLive();
@@ -46,12 +47,30 @@ public class LivePusher {
         native_stop();
     }
 
+    /**
+     * 进行一些初始化
+     */
     public native void native_init();
 
+    /**
+     * 创建编码器
+     * @param width
+     * @param height
+     * @param fps
+     * @param bitrate
+     */
     public native void native_setVideoEncInfo(int width, int height, int fps, int bitrate);
 
+    /**
+     * 启动一个线程进行Tcp连接到服务器
+     * @param path
+     */
     public native void native_start(String path);
 
+    /**
+     * 添加视频数据到队列中去
+     * @param data
+     */
     public native void native_pushVideo(byte[] data);
 
     public native void native_stop();
