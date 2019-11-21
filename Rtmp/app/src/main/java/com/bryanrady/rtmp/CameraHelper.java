@@ -26,6 +26,7 @@ public class CameraHelper implements SurfaceHolder.Callback, Camera.PreviewCallb
     private Camera.PreviewCallback mPreviewCallback;
     private int mRotation;
     private OnChangedSizeListener mOnChangedSizeListener;
+    private byte[] mBytes;
 
     public CameraHelper(Activity activity, int cameraId, int width, int height) {
         mActivity = activity;
@@ -70,6 +71,7 @@ public class CameraHelper implements SurfaceHolder.Callback, Camera.PreviewCallb
             setPreviewOrientation(parameters);
             mCamera.setParameters(parameters);
             mBuffer = new byte[mWidth * mHeight * 3 / 2];
+            mBytes = new byte[mBuffer.length];
             //数据缓存区
             mCamera.addCallbackBuffer(mBuffer);
             mCamera.setPreviewCallbackWithBuffer(this);
@@ -170,8 +172,61 @@ public class CameraHelper implements SurfaceHolder.Callback, Camera.PreviewCallb
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
         // data数据依然是倒的
-        mPreviewCallback.onPreviewFrame(data, camera);
+        switch (mRotation) {
+            case Surface.ROTATION_0:
+                rotation90(data);
+                break;
+            case Surface.ROTATION_90: // 横屏 左边是头部(home键在右边)
+                break;
+            case Surface.ROTATION_270:// 横屏 右边是头部
+                break;
+        }
+        mPreviewCallback.onPreviewFrame(mBytes, camera);
         camera.addCallbackBuffer(mBuffer);
+    }
+
+    private void rotation90(byte[] data) {
+        int index = 0;
+        int ySize = mWidth * mHeight;
+        //u和v
+        int uvHeight = mHeight / 2;
+        //后置摄像头顺时针旋转90度
+        if (mCameraId == Camera.CameraInfo.CAMERA_FACING_BACK) {
+            //将y的数据旋转之后 放入新的byte数组
+            for (int i = 0; i < mWidth; i++) {
+                for (int j = mHeight - 1; j >= 0; j--) {
+                    mBytes[index++] = data[mWidth * j + i];
+                }
+            }
+
+            //每次处理两个数据
+            for (int i = 0; i < mWidth; i += 2) {
+                for (int j = uvHeight - 1; j >= 0; j--) {
+                    // v
+                    mBytes[index++] = data[ySize + mWidth * j + i];
+                    // u
+                    mBytes[index++] = data[ySize + mWidth * j + i + 1];
+                }
+            }
+        } else {
+            //逆时针旋转90度
+            for (int i = 0; i < mWidth; i++) {
+                int nPos = mWidth - 1;
+                for (int j = 0; j < mHeight; j++) {
+                    mBytes[index++] = data[nPos - i];
+                    nPos += mWidth;
+                }
+            }
+            //u v
+            for (int i = 0; i < mWidth; i += 2) {
+                int nPos = ySize + mWidth - 1;
+                for (int j = 0; j < uvHeight; j++) {
+                    mBytes[index++] = data[nPos - i - 1];
+                    mBytes[index++] = data[nPos - i];
+                    nPos += mWidth;
+                }
+            }
+        }
     }
 
     public void setOnChangedSizeListener(OnChangedSizeListener listener) {

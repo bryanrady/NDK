@@ -5,9 +5,10 @@
 #ifndef RTMP_VIDEOCHANNEL_H
 #define RTMP_VIDEOCHANNEL_H
 
-#include <x264.h>
 #include <pthread.h>
 #include "librtmp/rtmp.h"
+//这里<x264.h>必须放在后面不知道为什么，要不然会报错
+#include <x264.h>
 
 class VideoChannel{
         typedef void (*VideoCallback)(RTMPPacket *);

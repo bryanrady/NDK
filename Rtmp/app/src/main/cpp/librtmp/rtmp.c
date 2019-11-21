@@ -807,6 +807,26 @@ RTMP_Connect0(RTMP *r, struct sockaddr * service)
   r->m_sb.sb_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (r->m_sb.sb_socket != -1)
     {
+      /////////////////////////////////   设置连接超时时间 start //////////////////////////////////
+      /**
+       * 第2个bug：
+       *
+       * 在进行连接服务器的时候，一开始并没有设置超时时间，而是先连接后，下面才会进行设置接收数据的超时时间，
+       * 所以我们这里进行手动设置，将下面的代码复制到这里，在连接服务器之前进行设置，然后把
+       *
+       *        SO_RCVTIMEO 改成 SO_SNDTIMEO
+       *
+       *        这样我们外部设置的超时时间就会有效了。
+       */
+        SET_RCVTIMEO(tv, r->Link.timeout);
+        if (setsockopt
+                (r->m_sb.sb_socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv)))
+        {
+            RTMP_Log(RTMP_LOGERROR, "%s, Setting socket timeout to %ds failed!",
+                     __FUNCTION__, r->Link.timeout);
+        }
+        //////////////////////////////  设置连接超时时间  end  /////////////////////////////////////
+
       if (connect(r->m_sb.sb_socket, service, sizeof(struct sockaddr)) < 0)
 	{
 	  int err = GetSockError();
@@ -1382,8 +1402,12 @@ WriteN(RTMP *r, const char *buffer, int n)
 
 	  if (sockerr == EINTR && !RTMP_ctrlC)
 	    continue;
-
-	  RTMP_Close(r);
+        /**
+         * 第一个Bug：
+         * TODO 意外断网 阻止递归调用
+         * 将 RTMP_Close(r) 注释掉，我们外部在连接RTMP的时候会自己去调用RTMP_Close
+         */
+	  //RTMP_Close(r);
 	  n = 1;
 	  break;
 	}

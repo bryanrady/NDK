@@ -62,7 +62,7 @@ public class LivePusher {
     public native void native_setVideoEncInfo(int width, int height, int fps, int bitrate);
 
     /**
-     * 启动一个线程进行Tcp连接到服务器
+     * 启动一个线程进行Tcp连接到服务器 并开始推流
      * @param path
      */
     public native void native_start(String path);
@@ -73,6 +73,9 @@ public class LivePusher {
      */
     public native void native_pushVideo(byte[] data);
 
+    /**
+     * 停止推流
+     */
     public native void native_stop();
 
     public native void native_release();

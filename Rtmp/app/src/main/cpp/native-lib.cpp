@@ -7,8 +7,8 @@
 
 VideoChannel *videoChannel = 0;
 SafeQueue<RTMPPacket*> packets;
-bool isStart = 0;   //判断是否已经开始过直播
 pthread_t pid_tcp;  //进行TCP连接的线程
+bool isStart = 0;   //判断是否已经开始过直播
 bool readyPushing = 0;  //判断是否可以开始进行推流
 int start_time = 0;
 
@@ -64,6 +64,9 @@ void *start_tcp(void *args){
         }
         //2.初始化RTMP
         RTMP_Init(rtmp);
+
+        //第2个Bug：超时时间不生效，对连接服务器超时5s并没有效果，它会等到默认的30s后才告诉我们连接失败。
+        //解决办法: 在rtmp.c内部的RTMP_Connect0()方法中进行修改。
         //设置RTMP超时时间5s
         rtmp->Link.timeout = 5;
         //3.给RTMP设置url
@@ -76,8 +79,8 @@ void *start_tcp(void *args){
         RTMP_EnableWrite(rtmp);
         //5.连接服务器,这里不用发包，传个0
         ret = RTMP_Connect(rtmp,0);
-        if(!ret){
-            LOGE("Rtmp连接服务器失败!");
+        if (!ret) {
+            LOGE("Rtmp连接地址失败:%s", url);
             break;
         }
         //6.申请跟服务器创建流，然后才可以进行推送
@@ -93,7 +96,7 @@ void *start_tcp(void *args){
         //将packets设置为工作状态
         packets.setWork(1);
         RTMPPacket *packet = 0;
-        while (isStart){
+        while (readyPushing){
             ret = packets.pop(packet);
             //如果停止直播了，就退回
             if(!isStart){
@@ -112,6 +115,18 @@ void *start_tcp(void *args){
             }
             //发送包之前注意：
             packet->m_nInfoField2 = rtmp->m_stream_id;
+
+            //rtmp的第一个Bug：
+            //发送rtmp包 1：队列  会调用 WriteN
+            // 但是当发生意外断网？发送包失败，rtmpdump 内部的 WriteN 会调用RTMP_Close
+            // RTMP_Close 会调用SendFCUnpublish 会调用SendFCUnpublish又会调用 RTMP_SendPacket
+            // RTMP_SendPacket  最后又会调用到 RTMP_Close  这样就会造成一直递归调用。
+            // 解决办法: 将rtmp.c 里面WriteN方法的 Rtmp_Close注释掉
+
+            //那么我们为什么不注释掉SendFCUnpublish?而要注释掉RTMP_Close ？
+            //(1)首先我们不需要rtmp内部帮我们调用RTMP_Close，我们自己外部就会调用到RTMP_Close
+            //(2)如果我们没发生断网是正常向服务器推流，当我们要停止直播的时候，SendFCUnpublish 就会通知服务器客户端不想推流了。
+
             //7.发送RTMPPacket包   1:队列 表示把包放到队列里，然后一个一个发送
             ret = RTMP_SendPacket(rtmp,packet,1);
             //这里发送出去以后就把packet释放掉
@@ -120,11 +135,13 @@ void *start_tcp(void *args){
                 LOGE("Rtmp发送包失败!");
                 break;
             }
+            LOGE("Rtmp发送包成功!");
         }
         releaseRTMPPackets(packet);
     }while (0);
 
-    //释放
+    isStart = 0;
+    readyPushing = 0;
     packets.setWork(0);
     packets.clear();
     if(rtmp){
@@ -171,11 +188,13 @@ Java_com_bryanrady_rtmp_LivePusher_native_1pushVideo(JNIEnv *env, jobject instan
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_bryanrady_rtmp_LivePusher_native_1stop(JNIEnv *env, jobject instance) {
-
+    readyPushing = 0;
+    pthread_join(pid_tcp, 0);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_bryanrady_rtmp_LivePusher_native_1release(JNIEnv *env, jobject instance) {
-
+    //release 和 init 进行对应 上面现在只new 出来一个 videoChannel
+    DELETE(videoChannel);
 }

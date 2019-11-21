@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startLive(View view) {
-        mLivePusher.startLive("rtmp://47.75.90.219/myapp/mystream");
+        mLivePusher.startLive("rtmp://192.168.232.129/myapp/mystream");
     }
 
     public void stopLive(View view) {
