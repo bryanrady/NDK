@@ -9,7 +9,7 @@ VideoChannel *videoChannel = 0;
 SafeQueue<RTMPPacket*> packets;
 bool isStart = 0;   //判断是否已经开始过直播
 pthread_t pid_tcp;  //进行TCP连接的线程
-int readyPushing = 0;
+bool readyPushing = 0;  //判断是否可以开始进行推流
 int start_time = 0;
 
 void releaseRTMPPackets(RTMPPacket*& packet){
@@ -20,10 +20,24 @@ void releaseRTMPPackets(RTMPPacket*& packet){
     }
 }
 
+/**
+ * RTMP包组装完成后，就添加时间戳然后push到队列中
+ */
+void rtmpPacketCompleted(RTMPPacket *packet){
+    if(packet){
+        //设置时间戳
+       packet->m_nTimeStamp = RTMP_GetTime() - start_time;
+       //添加到队列中去
+       packets.push(packet);
+    }
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_bryanrady_rtmp_LivePusher_native_1init(JNIEnv* env,jobject instance) {
     //准备一个Video编码器的工具类，通过这个工具来进行编码
     videoChannel = new VideoChannel;
+    //这里设置了回调，当RTMP包组装完成后就会回调到rtmpPacketCompleted这个方法中
+    videoChannel->setVideoCallback(rtmpPacketCompleted);
     //准备一个队列,打包好的数据 放入队列，在线程中统一的取出数据再发送给服务器
     packets.setReleaseCallback(releaseRTMPPackets);
 }
