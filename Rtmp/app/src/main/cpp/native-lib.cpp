@@ -5,18 +5,18 @@
 #include "macro.h"
 #include "VideoChannel.h"
 
-VideoChannel *videoChannel = 0;
 SafeQueue<RTMPPacket*> packets;
+VideoChannel *videoChannel = 0;
 pthread_t pid_tcp;  //进行TCP连接的线程
+
 bool isStart = 0;   //判断是否已经开始过直播
 bool readyPushing = 0;  //判断是否可以开始进行推流
-int start_time = 0;
+uint32_t start_time = 0;
 
 void releaseRTMPPackets(RTMPPacket*& packet){
     if (packet) {
         RTMPPacket_Free(packet);
-        delete packet;
-        packet = 0;
+        DELETE(packet);
     }
 }
 
@@ -128,7 +128,7 @@ void *start_tcp(void *args){
             //(2)如果我们没发生断网是正常向服务器推流，当我们要停止直播的时候，SendFCUnpublish 就会通知服务器客户端不想推流了。
 
             //7.发送RTMPPacket包   1:队列 表示把包放到队列里，然后一个一个发送
-            ret = RTMP_SendPacket(rtmp,packet,1);
+            ret = RTMP_SendPacket(rtmp, packet, 1);
             //这里发送出去以后就把packet释放掉
             releaseRTMPPackets(packet);
             if(!ret){
@@ -165,7 +165,7 @@ Java_com_bryanrady_rtmp_LivePusher_native_1start(JNIEnv *env, jobject instance, 
     strcpy(url,path);
 
     //启动线程进行Tcp连接
-    pthread_create(&pid_tcp,0,start_tcp,url);
+    pthread_create(&pid_tcp, 0, start_tcp, url);
 
     env->ReleaseStringUTFChars(_path,path);
 }
@@ -179,10 +179,10 @@ Java_com_bryanrady_rtmp_LivePusher_native_1pushVideo(JNIEnv *env, jobject instan
     if(!readyPushing){
         return;
     }
-    jbyte *data = env->GetByteArrayElements(_data,0);
+    jbyte *data = env->GetByteArrayElements(_data, 0);
     //将数据交给videoChannel进行编码,jbyte实际上就是int8_t,所以直接传递jbyte  typedef int8_t   jbyte;    /* signed 8 bits */
     videoChannel->encodeData(data);
-    env->ReleaseByteArrayElements(_data,data,0);
+    env->ReleaseByteArrayElements(_data, data, 0);
 }
 
 extern "C"

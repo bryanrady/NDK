@@ -4,7 +4,6 @@
 
 #include "VideoChannel.h"
 #include "macro.h"
-#include "librtmp/rtmp.h"
 
 VideoChannel::VideoChannel() {
     pthread_mutex_init(&mutex,0);
@@ -14,7 +13,7 @@ VideoChannel::~VideoChannel() {
     pthread_mutex_destroy(&mutex);
     if(videoCodec){
         x264_encoder_close(videoCodec);
-        videoCodec = 0;
+        DELETE(videoCodec);
     }
     if(pic_in){
         x264_picture_clean(pic_in);
@@ -40,7 +39,7 @@ void VideoChannel::setVideoEncInfo(int width, int height, int fps, int bitrate) 
     //java层点击切换摄像头，就会调用到这个方法，所以如果编码器已经打开过了，就要把老的编码器进行释放
     if(videoCodec){
         x264_encoder_close(videoCodec);
-        videoCodec = 0;
+        DELETE(videoCodec);
     }
     if(pic_in){
         x264_picture_clean(pic_in);
@@ -97,7 +96,7 @@ void VideoChannel::setVideoEncInfo(int width, int height, int fps, int bitrate) 
     videoCodec = x264_encoder_open(&param);
 
     pic_in = new x264_picture_t;
-    x264_picture_alloc(pic_in,X264_CSP_I420,width,height);
+    x264_picture_alloc(pic_in, X264_CSP_I420, width, height);
 
     pthread_mutex_unlock(&mutex);
 }
@@ -126,7 +125,7 @@ void VideoChannel::encodeData(int8_t *data) {
     int pi_nal;
     x264_picture_t pic_out;
     //编码
-    int ret = x264_encoder_encode(videoCodec,&pp_nal,&pi_nal,pic_in,&pic_out);
+    int ret = x264_encoder_encode(videoCodec, &pp_nal, &pi_nal, pic_in, &pic_out);
     if (ret < 0) {
         pthread_mutex_unlock(&mutex);
         return;
@@ -291,6 +290,7 @@ void VideoChannel::sendFrame(int type, uint8_t *p_payload, int i_payload) {
     //视频信息
     if (type == NAL_SLICE_IDR) {
         packet->m_body[i++] = 0x17;
+        LOGE("关键帧");
     }else{
         packet->m_body[i++] = 0x27;
     }

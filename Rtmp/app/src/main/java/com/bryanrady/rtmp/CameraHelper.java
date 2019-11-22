@@ -77,7 +77,6 @@ public class CameraHelper implements SurfaceHolder.Callback, Camera.PreviewCallb
             mCamera.setPreviewCallbackWithBuffer(this);
             //设置预览画面
             mCamera.setPreviewDisplay(mSurfaceHolder);
-            mOnChangedSizeListener.onChanged(mWidth, mHeight);
             mCamera.startPreview();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -92,15 +91,18 @@ public class CameraHelper implements SurfaceHolder.Callback, Camera.PreviewCallb
         switch (mRotation) {
             case Surface.ROTATION_0:
                 degrees = 0;
+                mOnChangedSizeListener.onChanged(mWidth, mHeight);
                 break;
             case Surface.ROTATION_90: // 横屏 左边是头部(home键在右边)
                 degrees = 90;
+                mOnChangedSizeListener.onChanged(mWidth, mHeight);
                 break;
-            case Surface.ROTATION_180:
-                degrees = 180;
-                break;
-            case Surface.ROTATION_270:// 横屏 头部在右边
+//            case Surface.ROTATION_180:
+//                degrees = 180;
+//                break;
+            case Surface.ROTATION_270:// 横屏 右边是头部
                 degrees = 270;
+                mOnChangedSizeListener.onChanged(mWidth, mHeight);
                 break;
         }
         int result;
@@ -171,7 +173,7 @@ public class CameraHelper implements SurfaceHolder.Callback, Camera.PreviewCallb
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
-        // data数据依然是倒的
+        // data数据依然是倒的,所以要进行旋转把旋转后的数据回调出去
         switch (mRotation) {
             case Surface.ROTATION_0:
                 rotation90(data);
