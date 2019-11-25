@@ -84,6 +84,7 @@ RTMPPacket *AudioChannel::getAudioTag() {
 //    unsigned long *pSizeOfDecoderSpecificInfo
     u_char *ppBuffer = 0;
     u_long pSizeOfDecoderSpecificInfo;
+    //获得音频解码信息包，用来告知音频如何解码的 类似视频的sps与pps
     faacEncGetDecoderSpecificInfo(audioCodec, &ppBuffer, &pSizeOfDecoderSpecificInfo);
 
     int bodySize = 2 + pSizeOfDecoderSpecificInfo;
@@ -96,8 +97,8 @@ RTMPPacket *AudioChannel::getAudioTag() {
     }else{
         packet->m_body[0] = 0xAF;   //双声道
     }
-    //编码出的声音 都是 0x01
-    packet->m_body[1] = 0x01;
+    //第一个包 0x00
+    packet->m_body[1] = 0x00;
     //音频数据
     memcpy(&packet->m_body[2], ppBuffer, pSizeOfDecoderSpecificInfo);
 

@@ -105,14 +105,14 @@ void *start_tcp(void *args){
         //将packets设置为工作状态
         packets.setWork(1);
 
-        //这里继续调用一次保证第一个数据是 aac解码数据包
+        //将acc解码序列包添加到队列中的第一个，这里调用一次保证第一个数据是 aac解码数据包，然后后面发送的才是音频裸数据
         rtmpPacketCompleted(audioChannel->getAudioTag());
 
         RTMPPacket *packet = 0;
         while (readyPushing){
             ret = packets.pop(packet);
             //如果停止直播了，就退回
-            if(!isStart){
+            if(!readyPushing){
                 //如果停止了，还取出来了包，就进行释放
                 if(ret){
                     releaseRTMPPackets(packet);

@@ -50,4 +50,9 @@ public class MainActivity extends AppCompatActivity {
         mLivePusher.stopLive();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mLivePusher.release();
+    }
 }
