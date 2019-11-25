@@ -267,13 +267,29 @@ void DNFFmpeg::_start() {
                 videoChannel->packets.push(avPacket);
             }
         }else if(ret == AVERROR_EOF){   //读取完成了，但是可能还没有播放完
+            //这里没有处理导致内存泄漏，很可能会造成崩溃
+            if (avPacket){
+                //av_packet_free和av_packet_alloc()呈对应关系
+                //存放音频包或者视频包的队列,av_packet_alloc()内部获取的AVPacket *包所占用的内存是堆内存
+                // ，所以我们在调用队列的clear要手动的来释放
+                av_packet_free(&avPacket);
+                avPacket = 0;
+            }
             if(audioChannel->packets.empty() && audioChannel->frames.empty()
                && videoChannel->packets.empty() && videoChannel->frames.empty()){
+                LOGE("播放完毕");
                 break;
             }
             //为什么这里要让它继续循环，而不是sleep
             //如果是做直播，可以sleep,如果要支持点播也就是播放本地文件，我们拖动进度条后退的时候，也不会刷新了，可能就没有效果了
         }else{
+            if (avPacket){
+                //av_packet_free和av_packet_alloc()呈对应关系
+                //存放音频包或者视频包的队列,av_packet_alloc()内部获取的AVPacket *包所占用的内存是堆内存
+                // ，所以我们在调用队列的clear要手动的来释放
+                av_packet_free(&avPacket);
+                avPacket = 0;
+            }
             break;
         }
     }
