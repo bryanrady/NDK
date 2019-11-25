@@ -4,6 +4,7 @@
 
 #include "VideoChannel.h"
 #include "macro.h"
+#include <cstring>
 
 VideoChannel::VideoChannel() {
     pthread_mutex_init(&mutex,0);
@@ -92,7 +93,7 @@ void VideoChannel::setVideoEncInfo(int width, int height, int fps, int bitrate) 
 
     //到这里参数就配置好了
 
-    //打开x264编码器,后续就通过这个编码器进行编码
+    //打开x264编码器,后续就通过这个编码器进行编码成h.264格式的数据
     videoCodec = x264_encoder_open(&param);
 
     pic_in = new x264_picture_t;

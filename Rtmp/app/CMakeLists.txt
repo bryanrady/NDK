@@ -16,10 +16,11 @@ add_library(
 
              ${source_file})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_SOURCE_DIR}/src/main/cpp/libx264/${ANDROID_ABI}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_SOURCE_DIR}/src/main/cpp/libs/${ANDROID_ABI}")
 
 target_link_libraries(
                        native-lib
                        rtmp
                        x264
+                       faac
                        log)

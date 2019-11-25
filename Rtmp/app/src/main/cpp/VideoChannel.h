@@ -17,7 +17,7 @@ public:
     VideoChannel();
     ~VideoChannel();
 
-    //创建x264编码器
+    //打开x264编码器
     void setVideoEncInfo(int width, int height, int fps, int bitrate);
     //对视频数据进行编码
     void encodeData(int8_t *data);
