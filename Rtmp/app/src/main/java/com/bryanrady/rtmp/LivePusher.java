@@ -23,7 +23,7 @@ public class LivePusher {
     public LivePusher(Activity activity, int width, int height, int bitrate, int fps, int cameraId) {
         native_init();
         mVideoChannel = new VideoChannel(this, activity, width, height, bitrate, fps, cameraId);
-        mAudioChannel = new AudioChannel();
+        mAudioChannel = new AudioChannel(this);
     }
 
     public void setPreviewDisplay(SurfaceHolder surfaceHolder) {
@@ -47,19 +47,32 @@ public class LivePusher {
         native_stop();
     }
 
+    public void release() {
+        mVideoChannel.release();
+        mAudioChannel.release();
+        native_release();
+    }
+
     /**
      * 进行一些初始化
      */
     public native void native_init();
 
     /**
-     * 创建编码器
+     * 创建视频编码器
      * @param width
      * @param height
      * @param fps
      * @param bitrate
      */
     public native void native_setVideoEncInfo(int width, int height, int fps, int bitrate);
+
+    /**
+     * 创建音频编码器
+     * @param sampleRateInHz
+     * @param channels
+     */
+    public native void native_setAudioEncInfo(int sampleRateInHz, int channels);
 
     /**
      * 启动一个线程进行Tcp连接到服务器 并开始推流
@@ -78,6 +91,13 @@ public class LivePusher {
      */
     public native void native_stop();
 
+    /**
+     * 释放
+     */
     public native void native_release();
+
+    public native int getInputSamples();
+
+    public native void native_pushAudio(byte[] data);
 
 }

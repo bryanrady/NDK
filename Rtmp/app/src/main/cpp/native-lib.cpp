@@ -4,11 +4,13 @@
 #include "safe_queue.h"
 #include "macro.h"
 #include "VideoChannel.h"
+#include "AudioChannel.h"
+
+VideoChannel *videoChannel = 0;
+AudioChannel *audioChannel = 0;
 
 SafeQueue<RTMPPacket*> packets;
-VideoChannel *videoChannel = 0;
 pthread_t pid_tcp;  //进行TCP连接的线程
-
 bool isStart = 0;   //判断是否已经开始过直播
 bool readyPushing = 0;  //判断是否可以开始进行推流
 uint32_t start_time = 0;
@@ -38,8 +40,15 @@ Java_com_bryanrady_rtmp_LivePusher_native_1init(JNIEnv* env,jobject instance) {
     videoChannel = new VideoChannel;
     //这里设置了回调，当RTMP包组装完成后就会回调到rtmpPacketCompleted这个方法中
     videoChannel->setVideoCallback(rtmpPacketCompleted);
-    //准备一个队列,打包好的数据 放入队列，在线程中统一的取出数据再发送给服务器
+
+    //准备一个Audio编码器，通过AudioChannel来进行编码
+    audioChannel = new AudioChannel;
+    audioChannel->setAudioCallback(rtmpPacketCompleted);
+
+    //设置回调
     packets.setReleaseCallback(releaseRTMPPackets);
+
+    //接下来要做的就是准备一个队列,打包好的数据 放入队列，在线程中统一的取出数据再发送给服务器
 }
 
 extern "C"
@@ -95,6 +104,10 @@ void *start_tcp(void *args){
         readyPushing = 1;
         //将packets设置为工作状态
         packets.setWork(1);
+
+        //这里继续调用一次保证第一个数据是 aac解码数据包
+        rtmpPacketCompleted(audioChannel->getAudioTag());
+
         RTMPPacket *packet = 0;
         while (readyPushing){
             ret = packets.pop(packet);
@@ -139,7 +152,7 @@ void *start_tcp(void *args){
         }
         releaseRTMPPackets(packet);
     }while (0);
-
+    //释放
     isStart = 0;
     readyPushing = 0;
     packets.setWork(0);
@@ -149,6 +162,7 @@ void *start_tcp(void *args){
         RTMP_Free(rtmp);
     }
     DELETE(url);
+
     return 0;
 }
 
@@ -189,6 +203,7 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_bryanrady_rtmp_LivePusher_native_1stop(JNIEnv *env, jobject instance) {
     readyPushing = 0;
+    packets.setWork(0);
     pthread_join(pid_tcp, 0);
 }
 
@@ -197,4 +212,37 @@ JNIEXPORT void JNICALL
 Java_com_bryanrady_rtmp_LivePusher_native_1release(JNIEnv *env, jobject instance) {
     //release 和 init 进行对应 上面现在只new 出来一个 videoChannel
     DELETE(videoChannel);
+    DELETE(audioChannel);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_bryanrady_rtmp_LivePusher_native_1setAudioEncInfo(JNIEnv *env, jobject instance,
+                                                           jint sampleRateInHz, jint channels) {
+    if(audioChannel){
+        audioChannel->setAudioEncInfo(sampleRateInHz, channels);
+    }
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_bryanrady_rtmp_LivePusher_getInputSamples(JNIEnv *env, jobject instance) {
+    if(audioChannel){
+        return audioChannel->getInputSamples();
+    }
+    return -1;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_bryanrady_rtmp_LivePusher_native_1pushAudio(JNIEnv *env, jobject instance, jbyteArray _data) {
+    if(!audioChannel){
+        return;
+    }
+    if(!readyPushing){
+        return;
+    }
+    jbyte* data = env->GetByteArrayElements(_data, 0);
+    audioChannel->encodeData(data);
+    env->ReleaseByteArrayElements(_data, data, 0);
 }
