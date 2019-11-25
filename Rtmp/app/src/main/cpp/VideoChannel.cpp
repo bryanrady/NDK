@@ -14,7 +14,7 @@ VideoChannel::~VideoChannel() {
     pthread_mutex_destroy(&mutex);
     if(videoCodec){
         x264_encoder_close(videoCodec);
-        DELETE(videoCodec);
+        videoCodec = 0;
     }
     if(pic_in){
         x264_picture_clean(pic_in);
@@ -40,7 +40,7 @@ void VideoChannel::setVideoEncInfo(int width, int height, int fps, int bitrate) 
     //java层点击切换摄像头，就会调用到这个方法，所以如果编码器已经打开过了，就要把老的编码器进行释放
     if(videoCodec){
         x264_encoder_close(videoCodec);
-        DELETE(videoCodec);
+        videoCodec = 0;
     }
     if(pic_in){
         x264_picture_clean(pic_in);
