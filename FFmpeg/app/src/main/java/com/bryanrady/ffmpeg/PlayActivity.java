@@ -47,9 +47,9 @@ public class PlayActivity extends AppCompatActivity implements DNPlayer.OnPrepar
         mDnPlayer.setOnErrorListener(this);
         mDnPlayer.setOnProgressListener(this);
         mDnPlayer.setSurfaceView(mSurfaceView);
-        //    mDnPlayer.setDataSource("rtmp://192.168.1.100:1935/live/wqb");
-        //    mDnPlayer.setDataSource("rtmp://58.200.131.2:1935/livetv/hunantv");
-        mDnPlayer.setDataSource("/sdcard/aa5.mp4");
+        mDnPlayer.setDataSource("rtmp://192.168.232.129:1935/myapp/123");
+        //mDnPlayer.setDataSource("rtmp://58.200.131.2:1935/livetv/hunantv");
+        //mDnPlayer.setDataSource("/sdcard/aa5.mp4");
 
         if(mIsPause){
             mBtnPause.setText("播放");
