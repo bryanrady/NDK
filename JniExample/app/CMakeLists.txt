@@ -25,7 +25,7 @@ add_library( # Sets the name of the library.
 # CMAKE_CXX_FLAGS=--sysroot=XX
 # 重新定义  CMAKE_CXX_FLAGS 变量  +
 # CMAKE_SOURCE_DIR 的值是当前这个文件的地址
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_SOURCE_DIR}/src/main/jniLibs/armeabi-v7a")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}")
 
 #这种方式也可以
 #add_library(Test SHARED IMPORTED)

@@ -122,7 +122,7 @@ Java_com_bryanrady_example_MainActivity_transferObjectToJni(JNIEnv *env, jobject
     LOGE("从Girl对象获取到的age字段: %d",jageInt);
 
     //2.获取属性值后修改属性字段值,通过Java打印gril对象后发现属性值已经改变
-    char *updateNameStr = "悦悦";
+    const char *updateNameStr = "悦悦";
     jstring jupdateNameStr = env->NewStringUTF(updateNameStr);
     env->SetObjectField(girl,nameFieldId,jupdateNameStr);
 
@@ -143,7 +143,7 @@ Java_com_bryanrady_example_MainActivity_transferObjectToJni(JNIEnv *env, jobject
     //4.通过反射Girl的setName()和setAge()方法修改值
     //方法签名 (L/java/lang/String;)V ，括号里面的代表参数，String类型所以是L/java/lang/String;，返回值是void，所以是V
     jmethodID setNameMethodId = env->GetMethodID(girlCls,"setName","(Ljava/lang/String;)V");
-    char *updateNameStr2 = "思思";
+    const char *updateNameStr2 = "思思";
     jstring jupdateNameStr2 = env->NewStringUTF(updateNameStr2);
     env->CallVoidMethod(girl,setNameMethodId,jupdateNameStr2);
 
