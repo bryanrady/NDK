@@ -19,7 +19,7 @@ public class Caculator {
     }
 
     @Replace(wrongClassName = "com.bryanrady.andfix.Caculator",wrongMethodName = "caculat")
-    public void caculat(){
+    public void caculat() {
         Toast.makeText(mContext,"修复好了",Toast.LENGTH_SHORT).show();
     }
 }

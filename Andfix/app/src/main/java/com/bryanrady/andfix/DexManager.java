@@ -30,6 +30,7 @@ public class DexManager {
         try {
             DexFile dexFile = DexFile.loadDex(file.getAbsolutePath(), new File(context.getCacheDir(),"opt")
                     .getAbsolutePath(),Context.MODE_PRIVATE);
+            //entries dex里面有多少个类
             Enumeration<String> entries = dexFile.entries();
             //遍历
             while (entries.hasMoreElements()){

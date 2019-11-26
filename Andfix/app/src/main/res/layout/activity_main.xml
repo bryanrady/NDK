@@ -16,4 +16,13 @@
         android:text="测试"
         android:textAllCaps="false" />
 
+    <Button
+        android:onClick="fix"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_gravity="center"
+        android:text="修复"
+        android:textAllCaps="false" />
+
 </LinearLayout>

@@ -16,11 +16,7 @@ public class Caculator {
     }
 
     public void caculat() {
-        try {
-            throw new Exception("出错了");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        throw new RuntimeException("出异常了");
     }
 
 }
