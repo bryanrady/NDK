@@ -1,6 +1,7 @@
 package com.bryanrady.andfix;
 
 import android.content.Context;
+import android.widget.Toast;
 
 /**
  * 报错的类
@@ -9,14 +10,8 @@ import android.content.Context;
  */
 public class Caculator {
 
-    private Context mContext;
-
-    public Caculator(Context context){
-        mContext = context;
-    }
-
-    public void caculat() {
-        throw new RuntimeException("出异常了");
+    public void caculat(Context context) {
+        Toast.makeText(context,"有问题需要修复",Toast.LENGTH_SHORT).show();
     }
 
 }

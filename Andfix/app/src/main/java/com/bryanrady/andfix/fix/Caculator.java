@@ -3,7 +3,7 @@ package com.bryanrady.andfix.fix;
 import android.content.Context;
 import android.widget.Toast;
 
-import com.bryanrady.andfix.fix.anotation.Replace;
+import com.bryanrady.andfix.Replace;
 
 /**
  * 修复类
@@ -12,14 +12,8 @@ import com.bryanrady.andfix.fix.anotation.Replace;
  */
 public class Caculator {
 
-    private Context mContext;
-
-    public Caculator(Context context){
-        mContext = context;
-    }
-
     @Replace(wrongClassName = "com.bryanrady.andfix.Caculator",wrongMethodName = "caculat")
-    public void caculat() {
-        Toast.makeText(mContext,"修复好了",Toast.LENGTH_SHORT).show();
+    public void caculat(Context context) {
+        Toast.makeText(context,"修复好了",Toast.LENGTH_SHORT).show();
     }
 }

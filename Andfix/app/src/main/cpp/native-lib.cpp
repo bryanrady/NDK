@@ -20,5 +20,4 @@ Java_com_bryanrady_andfix_DexManager_replace(JNIEnv *env, jobject thiz, jobject 
     wrongMethod->dex_code_item_offset_ = rightMethod->dex_code_item_offset_;
     wrongMethod->dex_method_index_ = rightMethod->dex_method_index_;
     wrongMethod->method_index_ = rightMethod->method_index_;
-    env->FindClass()
 }

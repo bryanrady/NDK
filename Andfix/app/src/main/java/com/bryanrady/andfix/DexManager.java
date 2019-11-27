@@ -2,8 +2,7 @@ package com.bryanrady.andfix;
 
 import android.content.Context;
 import android.text.TextUtils;
-
-import com.bryanrady.andfix.fix.anotation.Replace;
+import android.widget.Toast;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -28,8 +27,10 @@ public class DexManager {
      */
     public void loadDex(Context context,File file){
         try {
-            DexFile dexFile = DexFile.loadDex(file.getAbsolutePath(), new File(context.getCacheDir(),"opt")
-                    .getAbsolutePath(),Context.MODE_PRIVATE);
+            DexFile dexFile = DexFile.loadDex(
+                    file.getAbsolutePath(),
+                    new File(context.getCacheDir(),"opt").getAbsolutePath(),
+                    Context.MODE_PRIVATE);
             //entries dex里面有多少个类
             Enumeration<String> entries = dexFile.entries();
             //遍历
@@ -40,7 +41,7 @@ public class DexManager {
                 //得到dex文件中的修复类
                 Class rightClass = dexFile.loadClass(className, context.getClassLoader());
                 if(rightClass != null){
-                    findWrongClass(rightClass);
+                    findWrongClass(context,rightClass);
                 }
             }
         } catch (Exception e) {
@@ -52,7 +53,7 @@ public class DexManager {
      * 通过修复类找到错误的类和方法
      * @param rightClass
      */
-    private void findWrongClass(Class rightClass) {
+    private void findWrongClass(Context context,Class rightClass) {
         Method[] methods = rightClass.getDeclaredMethods();
         for (Method rightMethod : methods){
             Replace replace = rightMethod.getAnnotation(Replace.class);
@@ -70,6 +71,7 @@ public class DexManager {
                     //第2个参数：获取错误方法的参数类型，通过正确方法来获取
                     Method wrongMethod = wrongClass.getDeclaredMethod(wrongMethodName,rightMethod.getParameterTypes());
                     replace(wrongMethod, rightMethod);
+                    Toast.makeText(context,"加载dex，替换方法完成",Toast.LENGTH_SHORT).show();
                 }
             } catch (Exception e) {
                 e.printStackTrace();

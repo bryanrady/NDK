@@ -1,4 +1,4 @@
-package com.bryanrady.andfix.fix.anotation;
+package com.bryanrady.andfix;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
