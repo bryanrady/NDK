@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-//这个是6.0源码的art 所以运行在7.0以上可能会报错
+//这个是5.0源码的art 所以运行在6.0以上可能会报错
 
 namespace art{
     namespace mirror{
