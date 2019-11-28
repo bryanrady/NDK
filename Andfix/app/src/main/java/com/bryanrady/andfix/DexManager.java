@@ -1,6 +1,7 @@
 package com.bryanrady.andfix;
 
 import android.content.Context;
+import android.os.Build;
 import android.text.TextUtils;
 import android.widget.Toast;
 
@@ -70,8 +71,14 @@ public class DexManager {
                     Class wrongClass = Class.forName(wrongClassName);
                     //第2个参数：获取错误方法的参数类型，通过正确方法来获取
                     Method wrongMethod = wrongClass.getDeclaredMethod(wrongMethodName,rightMethod.getParameterTypes());
-                    replace(wrongMethod, rightMethod);
-                    Toast.makeText(context,"加载dex，替换方法完成",Toast.LENGTH_SHORT).show();
+                    //如果当前版本小于19 那就是dalvik虚拟机
+                    if(Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT){
+                        replaceDalvik(Build.VERSION.SDK_INT ,wrongMethod, rightMethod);
+                        Toast.makeText(context,"dalvik虚拟机 加载dex，替换方法完成",Toast.LENGTH_SHORT).show();
+                    }else{  //4.4以上 就是art虚拟机
+                        replaceArt(Build.VERSION.SDK_INT ,wrongMethod, rightMethod);
+                        Toast.makeText(context,"art虚拟机 加载dex，替换方法完成",Toast.LENGTH_SHORT).show();
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -80,10 +87,19 @@ public class DexManager {
     }
 
     /**
-     * 替换方法（方法级的替换 ）
+     * dalvik虚拟机 替换方法（方法级的替换 ）
+     * @param sdk
      * @param wrongMethod
      * @param rightMethod
      */
-    private native void replace(Method wrongMethod,Method rightMethod);
+    private native void replaceDalvik(int sdk, Method wrongMethod,Method rightMethod);
+
+    /**
+     * art虚拟机 替换方法（方法级的替换 ）
+     * @param sdk
+     * @param wrongMethod
+     * @param rightMethod
+     */
+    private native void replaceArt(int sdk, Method wrongMethod,Method rightMethod);
 
 }
