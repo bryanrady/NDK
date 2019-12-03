@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    //https://blog.csdn.net/a756213932/article/details/101853198    android ndk使用giflib高性能显示gif
     public void ndkLoadGif() {
         File file = new File(Environment.getExternalStorageDirectory(),"demo2.gif");
         if(file.exists()){
