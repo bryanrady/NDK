@@ -16,4 +16,6 @@ target_link_libraries(
 
         gif
 
+        jnigraphics
+
         log)

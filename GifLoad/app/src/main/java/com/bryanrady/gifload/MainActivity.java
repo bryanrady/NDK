@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -42,6 +43,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        ndkLoadGif();
+
+    }
+
+    public void ndkLoadGif() {
         File file = new File(Environment.getExternalStorageDirectory(),"demo2.gif");
         if(file.exists()){
             mGifHandler = new GifHandler(file.getAbsolutePath());

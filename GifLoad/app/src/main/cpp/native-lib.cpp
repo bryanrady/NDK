@@ -334,7 +334,6 @@ Java_com_bryanrady_gifload_GifHandler_native_1updateFrame(JNIEnv *env, jobject i
                                                   jobject bitmap) {
     GifFileType *gifFileType = reinterpret_cast<GifFileType *>(ndk_gif);
     GifBean *gifBean = static_cast<GifBean *>(gifFileType->UserData);
-
     //获取bitmap的信息
     //uint32_t stride;  bitmap每一行的像素
     AndroidBitmapInfo info;
@@ -345,10 +344,10 @@ Java_com_bryanrady_gifload_GifHandler_native_1updateFrame(JNIEnv *env, jobject i
     AndroidBitmap_lockPixels(env,bitmap,&pixels);
 
     //绘制bitmap  只支持89a的版本
-    drawBitmap(gifFileType,gifBean,info,pixels);
+    //drawBitmap(gifFileType,gifBean,info,pixels);
 
     //项目中用的  既支持87a版本 又支持89a版本
-    //drawFrame(gifFileType, gifBean, info, pixels, false);
+    drawFrame(gifFileType, gifBean, info, pixels, false);
 
     //绘制完成后 对当前帧进行+1
     gifBean->current_frame += 1;
@@ -370,11 +369,11 @@ Java_com_bryanrady_gifload_GifHandler_native_1release(JNIEnv *env, jobject insta
     GifFileType *gifFileType = reinterpret_cast<GifFileType *>(ndk_gif);
     GifBean *gifBean = static_cast<GifBean *>(gifFileType->UserData);
 
-    DGifCloseFile(gifFileType);
-    gifFileType = 0;
-
     free(gifBean->delays);
     gifBean->delays = 0;
     free(gifBean);
     gifBean = 0;
+
+    DGifCloseFile(gifFileType);
+    gifFileType = 0;
 }
