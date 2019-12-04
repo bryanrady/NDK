@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resource>
+    <paths xmlns:android="http://schemas.android.com/apk/res/android">
+        <root-path name="root" path="" />
+        <files-path name="files" path="" />
+        <cache-path name="cache" path="" />
+        <external-path name="external" path="" />
+        <external-files-path name="name" path="path" />
+        <external-cache-path name="name" path="path" />
+    </paths>
+
+<!--    <root-path>	代表设备的根目录 new File("/")-->
+<!--    <files-path>	代表 context.getFileDir()-->
+<!--    <cache-path>	代表 context.getCacheDir()-->
+<!--    <external-path>	代表 Environment.getExternalStorageDirectory()-->
+<!--    <external-files-path>	代表 context.getExternalFilesDirs()-->
+<!--    <external-cache-path>	代表 getExternalCacheDirs()-->
+
+<!--    path 即为代表目录下的子目录，例如：-->
+
+<!--    <external-path name="external" path="pics"/>-->
+<!--    代表的目录即为：Environment.getExternalStorageDirectory()/pics-->
+
+<!--    总结  -->
+<!--        Android 7.0 禁止在应用外部公开 file:// URI，所以我们必须使用 content:// 替代 file://，这时主要需要 FileProvider 的支持 ，-->
+<!--        而因为 FileProvider 是 ContentProvider 的子类，所以需要在 AndroidManifest.xml 文件中进行注册，而又因为需要对真实的-->
+<!--         filepath 进行映射，所以需要编写一个 xml 文档，用于描述可使用的文件夹目录，以及通过 name 去映射该文件夹目录。-->
+
+<!--        当我们生成一个 content:// 的 Uri 对象之后，还需要对这个 Uri 接收的 App 赋予对应的权限，到此本文的内容就基本结束了。-->
+
+</resource>
