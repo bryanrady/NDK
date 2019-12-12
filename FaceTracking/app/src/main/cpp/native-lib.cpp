@@ -44,7 +44,7 @@ Java_com_example_facetracking_MainActivity_init(JNIEnv *env, jobject thiz, jstri
         tracker = 0;
     }
 
-    const char *model =env->GetStringUTFChars(model_,0);
+    const char *model = env->GetStringUTFChars(model_,0);
 
     //创建第一个分类器和跟踪适配器
     Ptr<CascadeClassifier> classifier = makePtr<CascadeClassifier>(model);
@@ -69,7 +69,6 @@ Java_com_example_facetracking_MainActivity_setSurface(JNIEnv *env, jobject thiz,
     if(nativeWindow){
         ANativeWindow_release(nativeWindow);
         nativeWindow = 0;
-        return;
     }
     nativeWindow = ANativeWindow_fromSurface(env,surface);
 }
@@ -149,7 +148,20 @@ Java_com_example_facetracking_MainActivity_postData(JNIEnv *env, jobject thiz, j
             //src.data ：上面指定的就是RGBA数据
             //把src.data 拷贝到 buffer.bits 里去  一行一行的拷贝 *4 是因为RGBA 有4个字节 RGBA四个各占一个字节
             // buffer.stride  一行有多少个数据
-            memcpy(buffer.bits, src.data, buffer.stride * buffer.height * 4);
+            //这样会有Bug
+        //    memcpy(buffer.bits, src.data, buffer.stride * buffer.height * 4);
+
+        //https://blog.csdn.net/weixin_34380948/article/details/88024825
+
+            //所以我们最好一行一行拷贝
+            uint8_t *dst_data = static_cast<uint8_t *>(buffer.bits);
+            //stride : 一行多少个数据 （RGBA） * 4
+            int dst_linesize = buffer.stride * 4;
+            //一行一行拷贝
+            for (int i = 0; i < buffer.height; ++i) {
+                memcpy(dst_data + i * dst_linesize, src.data + i * src.cols * 4, dst_linesize);
+            }
+
             //解锁 提交刷新
             ANativeWindow_unlockAndPost(nativeWindow);
         }while (0);

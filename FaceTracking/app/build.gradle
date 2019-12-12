@@ -13,7 +13,7 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags ""
-                abiFilters 'armeabi-v7a'
+                abiFilters 'armeabi-v7a','arm64-v8a'
                 //因为opencv要依赖 gnustl_static 所以要这样配置
                 // r18b的ndk gnustl_static被移除了，所以别用r18b
                 arguments "-DANDROID_STL=gnustl_static"
