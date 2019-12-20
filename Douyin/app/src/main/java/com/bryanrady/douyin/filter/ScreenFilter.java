@@ -3,7 +3,6 @@ package com.bryanrady.douyin.filter;
 import android.content.Context;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
-import android.util.Log;
 
 import com.bryanrady.douyin.R;
 import com.bryanrady.douyin.util.GlslShaderUtils;
@@ -66,7 +65,7 @@ public class ScreenFilter {
         //链接着色器
         GLES20.glLinkProgram(mProgram);
 
-        GLES20.glGetProgramiv(mProgram, GLES20.GL_COMPILE_STATUS, status, 0);
+        GLES20.glGetProgramiv(mProgram, GLES20.GL_LINK_STATUS, status, 0);
         if (status[0] != GLES20.GL_TRUE) {
             throw new IllegalStateException("ScreenFilter 着色器程序配置失败!");
         }
@@ -93,12 +92,10 @@ public class ScreenFilter {
         mVertexBuffer.clear();
         //世界坐标系 中心点为原点(0, 0)   左下角  右下角  左上角  右上角
         //点1 点2 点3 构成一个三角形 点2 点3 点4 构成一个三角形 这样两个三角形就能构成一个完整的矩形
-        float[] vertex = {
-                -1.0f, -1.0f,
-                1.0f,  -1.0f,
+        float[] vertex = {-1.0f, -1.0f,
+                1.0f, -1.0f,
                 -1.0f, 1.0f,
-                1.0f,  1.0f
-        };
+                1.0f, 1.0f};
         mVertexBuffer.put(vertex);
 
         //创建一个采样纹理坐标数据缓冲区 用来记录纹理坐标
@@ -143,6 +140,7 @@ public class ScreenFilter {
         //(1) 顶点坐标数据
         //(2) xy两个数据
         //(3) float类型
+        mVertexBuffer.position(0);
         GLES20.glVertexAttribPointer(mVPosition,2, GLES20.GL_FLOAT, false,0, mVertexBuffer);
         //传了数据之后 激活
         GLES20.glEnableVertexAttribArray(mVPosition);
