@@ -3,6 +3,7 @@ package com.bryanrady.douyin.filter;
 import android.content.Context;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.util.Log;
 
 import com.bryanrady.douyin.R;
 import com.bryanrady.douyin.util.GlslShaderUtils;

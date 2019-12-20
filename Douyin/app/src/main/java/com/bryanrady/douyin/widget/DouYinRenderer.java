@@ -5,6 +5,7 @@ import android.hardware.Camera;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.transition.Scene;
+import android.util.Log;
 
 import com.bryanrady.douyin.filter.ScreenFilter;
 import com.bryanrady.douyin.util.CameraHelper;

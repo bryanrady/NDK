@@ -36,7 +36,7 @@ void main(){
     //gl_Position是一个内置变量 我们把顶点坐标数据的变量赋值给这个变量，OpenGL就知道它要画什么形状了
     gl_Position = vPosition;
     //取出vec4的前两个数据（采样点坐标的像素值）  这个aCoord最终会传递给片元着色器  这两种写法都可以
-    aCoord = (vCoord * vMatrix).xy;
-    //aCoord =  vec2((vCoord*vMatrix).x,(vCoord*vMatrix).y);
+    aCoord = (vMatrix * vCoord).xy;
+    //aCoord =  vec2((vMatrix*vCoord).x,(vMatrix*vCoord).y);
 }
 

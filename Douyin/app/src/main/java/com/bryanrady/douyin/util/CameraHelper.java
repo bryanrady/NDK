@@ -3,6 +3,7 @@ package com.bryanrady.douyin.util;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.util.Log;
 
 public class CameraHelper implements Camera.PreviewCallback {
 
@@ -69,7 +70,6 @@ public class CameraHelper implements Camera.PreviewCallback {
             ex.printStackTrace();
         }
     }
-
 
     public void setPreviewCallback(Camera.PreviewCallback previewCallback) {
         mPreviewCallback = previewCallback;

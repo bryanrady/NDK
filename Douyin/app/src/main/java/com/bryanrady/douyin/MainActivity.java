@@ -7,7 +7,6 @@ import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.os.Build;
 import android.os.Bundle;
-import android.widget.TextView;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
