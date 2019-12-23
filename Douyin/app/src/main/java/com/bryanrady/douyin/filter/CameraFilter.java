@@ -8,7 +8,10 @@ import com.bryanrady.douyin.R;
 import com.bryanrady.douyin.util.OpenGLUtils;
 
 /**
- * 使用FBO的Camera滤镜
+ * 采集摄像头图像数据  然后将图像数据画到FBO缓存中
+ *      为什么需要画到FBO中，因为我们后续要进行多种效果处理，如我们增加滤镜效果就需要从FBO中取出数据，
+ *      然后进行滤镜效果，然后再将滤镜效果后的图像输出到屏幕上
+ *      所以ScreenFilter就不需要使用扩展的samplerExternalOES来采集了 只需要再CameraFilter中使用扩展的来采集即可
  */
 public class CameraFilter extends AbstractFilter {
 
@@ -27,7 +30,7 @@ public class CameraFilter extends AbstractFilter {
     protected void changeCoordinate() {
         super.changeCoordinate();
         mGLTextureBuffer.clear();
-        //不需要显示到屏幕上 根据纹理坐标来传递数据
+        //不需要显示到屏幕上  所以根据纹理坐标系得到数据  左下角  右下角  左上角  右上角
         //摄像头是颠倒的 所以我们要来进行旋转
 //        float[] texture = {
 //                0.0f, 0.0f,
@@ -35,7 +38,7 @@ public class CameraFilter extends AbstractFilter {
 //                0.0f, 1.0f,
 //                1.0f, 1.0f
 //        };
-        //镜像
+        //镜像  就是第一行和第2行互换  第3行和第4行互换
 //        float[] texture = {
 //                1.0f, 0.0f,
 //                0.0f, 0.0f,

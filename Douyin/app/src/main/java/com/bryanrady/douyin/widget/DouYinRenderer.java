@@ -94,10 +94,12 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         //先写到FBO中，再从FBO中取出数据写到屏幕上
         //不需要显示到屏幕上 负责写入到FBO(帧缓存)
         mCameraFilter.setMatrix(mMtx);
+        //返回的是fbo的纹理Id,然后将fbo的纹理id交给ScreenFilter进行绘制，实际上就是交给了父类
+        //责任链 各司其职  就像流水线一样
         int textureId = mCameraFilter.onDrawFrame(mTextures[0]);
         //加效果滤镜
-        // id  = 效果1.onDrawFrame(id);
-        // id = 效果2.onDrawFrame(id);
+        // textureId  = 效果1.onDrawFrame(textureId);
+        // textureId = 效果2.onDrawFrame(textureId);
         //....
         //加完效果之后再显示到屏幕中去
         mScreenFilter.onDrawFrame(textureId);

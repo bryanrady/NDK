@@ -74,18 +74,14 @@ public abstract class AbstractFilter {
         //创建一个采样纹理坐标数据缓冲区 用来记录纹理坐标
         mGLTextureBuffer = ByteBuffer.allocateDirect(4 * 2 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
         mGLTextureBuffer.clear();
-        //这个是颠倒的原始图像
+
+        //需要显示到屏幕上 所以根据Android屏幕坐标系得到数据 左下角  右下角  左上角  右上角
         float[] texture = {
                 0.0f, 1.0f,
                 1.0f, 1.0f,
                 0.0f, 0.0f,
                 1.0f, 0.0f
         };
-        //这个是android坐标系得来的
-//        float[] texture = {0.0f, 1.0f,
-//                1.0f, 1.0f,
-//                0.0f, 0.0f,
-//                1.0f, 0.0f};
         //经过旋转
 //        float[] texture = {1.0f, 1.0f,
 //                1.0f, 0.0f,
