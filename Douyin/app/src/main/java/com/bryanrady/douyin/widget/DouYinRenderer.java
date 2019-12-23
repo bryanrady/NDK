@@ -5,6 +5,7 @@ import android.hardware.Camera;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 
+import com.bryanrady.douyin.filter.CameraFilter;
 import com.bryanrady.douyin.filter.ScreenFilter;
 import com.bryanrady.douyin.util.CameraHelper;
 
@@ -16,6 +17,7 @@ import javax.microedition.khronos.opengles.GL10;
  */
 public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
     private ScreenFilter mScreenFilter;
+    private CameraFilter mCameraFilter;
     private DouYinView mDouYinView;
     private CameraHelper mCameraHelper;
     private SurfaceTexture mSurfaceTexture;
@@ -45,6 +47,8 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mSurfaceTexture.setOnFrameAvailableListener(this);
         //用来渲染图像数据
         mScreenFilter = new ScreenFilter(mDouYinView.getContext());
+        //用来写到FBO缓存
+        mCameraFilter = new CameraFilter(mDouYinView.getContext());
     }
 
     /**
@@ -59,6 +63,7 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mCameraHelper.startPreview(mSurfaceTexture);
         //设置画布大小
         mScreenFilter.onReady(width, height);
+        mCameraFilter.onReady(width, height);
     }
 
     /**
@@ -83,9 +88,19 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         //获得变换矩阵 必须要通过变换矩阵来变换一下采样的坐标 才能得到正确的采样坐标点
         mSurfaceTexture.getTransformMatrix(mMtx);
 
-        //使用着色器程序来进行绘制
-        mScreenFilter.onDrawFrame(mTextures[0], mMtx);
+        //直接显示到屏幕上
+        //mScreenFilter.onDrawFrame2(mTextures[0], mMtx);
 
+        //先写到FBO中，再从FBO中取出数据写到屏幕上
+        //不需要显示到屏幕上 负责写入到FBO(帧缓存)
+        mCameraFilter.setMatrix(mMtx);
+        int textureId = mCameraFilter.onDrawFrame(mTextures[0]);
+        //加效果滤镜
+        // id  = 效果1.onDrawFrame(id);
+        // id = 效果2.onDrawFrame(id);
+        //....
+        //加完效果之后再显示到屏幕中去
+        mScreenFilter.onDrawFrame(textureId);
     }
 
     /**
@@ -96,6 +111,13 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
         //有一个新的图像后,通过调用requestRender就请求GLThread 回调一次 onDrawFrame()
         mDouYinView.requestRender();
+    }
+
+    /**
+     * 当应用处于后台的时候 就关闭摄像头
+     */
+    public void onSurfaceDestroyed(){
+        mCameraHelper.stopPreview();
     }
 
 }
