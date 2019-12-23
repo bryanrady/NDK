@@ -15,6 +15,13 @@ import android.view.SurfaceHolder;
  */
 public class DouYinView extends GLSurfaceView {
 
+    public enum Speed {
+        MODE_EXTRA_SLOW, MODE_SLOW, MODE_NORMAL, MODE_FAST, MODE_EXTRA_FAST
+    }
+
+    //默认正常速度
+    private Speed RECORD_SPEED = Speed.MODE_NORMAL;
+
     public DouYinRenderer mDouYinRenderer;
 
     public DouYinView(Context context) {
@@ -42,4 +49,35 @@ public class DouYinView extends GLSurfaceView {
         super.surfaceDestroyed(holder);
         mDouYinRenderer.onSurfaceDestroyed();
     }
+
+    public void setSpeed(Speed speed){
+        this.RECORD_SPEED = speed;
+    }
+
+    public void startRecord() {
+        float speed = 1.f;
+        switch (RECORD_SPEED) {
+            case MODE_EXTRA_SLOW:
+                speed = 0.3f;
+                break;
+            case MODE_SLOW:
+                speed = 0.5f;
+                break;
+            case MODE_NORMAL:
+                speed = 1.f;
+                break;
+            case MODE_FAST:
+                speed = 1.5f;
+                break;
+            case MODE_EXTRA_FAST:
+                speed = 3.f;
+                break;
+        }
+        mDouYinRenderer.startRecord(speed);
+    }
+
+    public void stopRecord() {
+        mDouYinRenderer.stopRecord();
+    }
+
 }

@@ -122,4 +122,9 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mCameraHelper.stopPreview();
     }
 
+    public void startRecord(float speed) {
+    }
+
+    public void stopRecord() {
+    }
 }
