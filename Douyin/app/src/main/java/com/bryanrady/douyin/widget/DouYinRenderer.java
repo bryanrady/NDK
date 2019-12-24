@@ -2,12 +2,17 @@ package com.bryanrady.douyin.widget;
 
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.opengl.EGL14;
+import android.opengl.EGLContext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 
 import com.bryanrady.douyin.filter.CameraFilter;
 import com.bryanrady.douyin.filter.ScreenFilter;
+import com.bryanrady.douyin.record.MediaRecorder;
 import com.bryanrady.douyin.util.CameraHelper;
+
+import java.io.IOException;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -23,6 +28,7 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     private SurfaceTexture mSurfaceTexture;
     private int[] mTextures;
     private float[] mMtx = new float[16];
+    private MediaRecorder mMediaRecorder;
 
     public DouYinRenderer(DouYinView douYinView){
         this.mDouYinView = douYinView;
@@ -49,6 +55,11 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mScreenFilter = new ScreenFilter(mDouYinView.getContext());
         //用来写到FBO缓存
         mCameraFilter = new CameraFilter(mDouYinView.getContext());
+
+        //渲染线程的EGL上下文
+        EGLContext eglContext = EGL14.eglGetCurrentContext();
+        //这里宽高交换一下 因为我们把摄像头旋转了的
+        mMediaRecorder = new MediaRecorder(mDouYinView.getContext(),"/sdcard/a.mp4", CameraHelper.HEIGHT, CameraHelper.WIDTH, eglContext);
     }
 
     /**
@@ -67,7 +78,7 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     }
 
     /**
-     * 绘制 OpenGl 就是用来绘制的 可以说它就是一个高级画笔
+     * 绘制 OpenGl 就是用来绘制的,可以说OpenGl就是一个高级画笔
      * @param gl
      */
     @Override
@@ -103,6 +114,8 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         //....
         //加完效果之后再显示到屏幕中去
         mScreenFilter.onDrawFrame(textureId);
+        //进行录制
+        mMediaRecorder.fireFrame(textureId, mSurfaceTexture.getTimestamp());
     }
 
     /**
@@ -123,8 +136,14 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     }
 
     public void startRecord(float speed) {
+        try {
+            mMediaRecorder.start(speed);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void stopRecord() {
+        mMediaRecorder.stop();
     }
 }

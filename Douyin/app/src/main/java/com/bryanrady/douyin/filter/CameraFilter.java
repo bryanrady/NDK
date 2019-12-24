@@ -20,7 +20,7 @@ public class CameraFilter extends AbstractFilter {
     private float[] mMtx;
 
     public CameraFilter(Context context) {
-        super(context, R.raw.camera_vertex_shader, R.raw.camera_fragment_shader);
+        super(context.getApplicationContext(), R.raw.camera_vertex_shader, R.raw.camera_fragment_shader);
     }
 
     /**
@@ -89,13 +89,12 @@ public class CameraFilter extends AbstractFilter {
         //解绑
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,0);
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER,0);
-
     }
 
 
     @Override
     public int onDrawFrame(int textureId) {
-        //把父类的删掉 自己重写
+        //不使用父类的 自己来重写
         //return super.onDrawFrame(textureId);
 
         //设置显示窗口

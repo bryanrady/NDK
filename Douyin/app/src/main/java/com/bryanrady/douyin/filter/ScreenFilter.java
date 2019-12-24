@@ -14,6 +14,6 @@ public class ScreenFilter extends AbstractFilter {
      * @param context
      */
     public ScreenFilter(Context context) {
-        super(context, R.raw.base_vertex_shader, R.raw.base_fragment_shader);
+        super(context.getApplicationContext(), R.raw.base_vertex_shader, R.raw.base_fragment_shader);
     }
 }

@@ -43,12 +43,12 @@ public class MainActivity extends AppCompatActivity implements RecordButton.OnRe
 
     @Override
     public void onRecordStart() {
-
+        mDouYinView.startRecord();
     }
 
     @Override
     public void onRecordStop() {
-
+        mDouYinView.stopRecord();
     }
 
     @Override
@@ -57,13 +57,13 @@ public class MainActivity extends AppCompatActivity implements RecordButton.OnRe
             case R.id.rb_extra_slow: //极慢
                 mDouYinView.setSpeed(DouYinView.Speed.MODE_EXTRA_SLOW);
                 break;
-            case R.id.rb_slow:
+            case R.id.rb_slow:      //慢
                 mDouYinView.setSpeed(DouYinView.Speed.MODE_SLOW);
                 break;
-            case R.id.rb_normal:
+            case R.id.rb_normal:    //标准
                 mDouYinView.setSpeed(DouYinView.Speed.MODE_NORMAL);
                 break;
-            case R.id.rb_fast:
+            case R.id.rb_fast:      //快
                 mDouYinView.setSpeed(DouYinView.Speed.MODE_FAST);
                 break;
             case R.id.rb_extra_fast: //极快
