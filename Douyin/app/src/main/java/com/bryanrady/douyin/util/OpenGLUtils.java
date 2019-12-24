@@ -4,6 +4,8 @@ import android.content.Context;
 import android.opengl.GLES20;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -18,7 +20,7 @@ public class OpenGLUtils {
      */
     public static String readRawTextFile(Context context, int rawId){
         //读取顶点着色器
-        InputStream is = context.getResources().openRawResource(rawId);
+        InputStream is = context.getApplicationContext().getResources().openRawResource(rawId);
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         String line;
         StringBuffer sb = new StringBuffer();
@@ -128,6 +130,25 @@ public class OpenGLUtils {
 
             //解绑 将纹理置为0
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
+        }
+    }
+
+    public static void copyAssets2SdCard(Context context, String src, String dst) {
+        try {
+            File file = new File(dst);
+            if (!file.exists()) {
+                InputStream is = context.getApplicationContext().getAssets().open(src);
+                FileOutputStream fos = new FileOutputStream(file);
+                int len;
+                byte[] buffer = new byte[2048];
+                while ((len = is.read(buffer)) != -1) {
+                    fos.write(buffer, 0, len);
+                }
+                is.close();
+                fos.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

@@ -7,10 +7,13 @@ import android.opengl.EGLContext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 
+import com.bryanrady.douyin.face.FaceTrack;
+import com.bryanrady.douyin.filter.BigEyeFilter;
 import com.bryanrady.douyin.filter.CameraFilter;
 import com.bryanrady.douyin.filter.ScreenFilter;
 import com.bryanrady.douyin.record.MediaRecorder;
 import com.bryanrady.douyin.util.CameraHelper;
+import com.bryanrady.douyin.util.OpenGLUtils;
 
 import java.io.IOException;
 
@@ -20,20 +23,28 @@ import javax.microedition.khronos.opengles.GL10;
 /**
  * 自定义GLSurfaceView的渲染器
  */
-public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
+public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener, Camera.PreviewCallback {
     private ScreenFilter mScreenFilter;
     private CameraFilter mCameraFilter;
+    private BigEyeFilter mBigEyeFilter;
     private DouYinView mDouYinView;
     private CameraHelper mCameraHelper;
     private SurfaceTexture mSurfaceTexture;
     private int[] mTextures;
     private float[] mMtx = new float[16];
     private MediaRecorder mMediaRecorder;
+    private FaceTrack mFaceTrack;
 
     public DouYinRenderer(DouYinView douYinView){
         this.mDouYinView = douYinView;
         //注意：我们使用OpenGL必须在GLThread线程，而这个渲染器的构造方法不是在GLThread线程中
         //mScreenFilter = new ScreenFilter(mDouYinView.getContext());
+
+        //拷贝 模型
+        OpenGLUtils.copyAssets2SdCard(mDouYinView.getContext(), "lbpcascade_frontalface.xml",
+                "/sdcard/lbpcascade_frontalface.xml");
+        OpenGLUtils.copyAssets2SdCard(mDouYinView.getContext(), "seeta_fa_v1.1.bin",
+                "/sdcard/seeta_fa_v1.1.bin");
     }
 
     /**
@@ -44,7 +55,8 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         //默认使用前置摄像头
-        mCameraHelper = new CameraHelper(Camera.CameraInfo.CAMERA_FACING_BACK);
+        mCameraHelper = new CameraHelper(Camera.CameraInfo.CAMERA_FACING_FRONT);
+        mCameraHelper.setPreviewCallback(this);
         //通过OpenGL 创建纹理id
         mTextures = new int[1];
         GLES20.glGenTextures(mTextures.length, mTextures, 0);
@@ -55,6 +67,8 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mScreenFilter = new ScreenFilter(mDouYinView.getContext());
         //用来写到FBO缓存
         mCameraFilter = new CameraFilter(mDouYinView.getContext());
+        //用来实现大眼效果
+        mBigEyeFilter = new BigEyeFilter(mDouYinView.getContext());
 
         //渲染线程的EGL上下文
         EGLContext eglContext = EGL14.eglGetCurrentContext();
@@ -70,11 +84,16 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
      */
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
+        // 创建跟踪器
+        mFaceTrack = new FaceTrack("/sdcard/lbpcascade_frontalface.xml", "/sdcard/seeta_fa_v1.1.bin", mCameraHelper);
+        //启动跟踪器
+        mFaceTrack.startTrack();
         //开启预览
         mCameraHelper.startPreview(mSurfaceTexture);
         //设置画布大小
-        mScreenFilter.onReady(width, height);
         mCameraFilter.onReady(width, height);
+        mBigEyeFilter.onReady(width, height);
+        mScreenFilter.onReady(width, height);
     }
 
     /**
@@ -112,6 +131,9 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         // textureId  = 效果1.onDrawFrame(textureId);
         // textureId = 效果2.onDrawFrame(textureId);
         //....
+        mBigEyeFilter.setFace(mFaceTrack.getFace());
+        textureId = mBigEyeFilter.onDrawFrame(textureId);
+
         //加完效果之后再显示到屏幕中去
         mScreenFilter.onDrawFrame(textureId);
         //进行录制
@@ -133,6 +155,7 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
      */
     public void onSurfaceDestroyed(){
         mCameraHelper.stopPreview();
+        mFaceTrack.stopTrack();
     }
 
     public void startRecord(float speed) {
@@ -145,5 +168,14 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
 
     public void stopRecord() {
         mMediaRecorder.stop();
+    }
+
+    @Override
+    public void onPreviewFrame(byte[] data, Camera camera) {
+        // data 送去进行人脸定位 与 关键点定位
+        //这个操作是个耗时操作，我们开线程来进行处理，如果我们在这里 new Thread这样的操作，会造成一直开很多线程，因为这个方法1s会回调很多次
+        //onPreviewFrame这个方法实在子线程中进行，所以我们可以通过HandlerThread进行子线程通知子线程
+
+        mFaceTrack.detector(data);
     }
 }
