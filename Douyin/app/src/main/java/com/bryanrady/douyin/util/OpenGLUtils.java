@@ -71,7 +71,7 @@ public class OpenGLUtils {
         GLES20.glGetShaderiv(fragmentShaderId, GLES20.GL_COMPILE_STATUS, status, 0);
         if(status[0] != GLES20.GL_TRUE){
             //throw new IllegalStateException("ScreenFilter 片元着色器配置失败!");
-            throw new IllegalStateException("load vertex shader:"+GLES20.glGetShaderInfoLog(fragmentShaderId));
+            throw new IllegalStateException("load fragment shader:"+GLES20.glGetShaderInfoLog(fragmentShaderId));
         }
 
         //3.创建着色器小程序(GPU上面的小程序)

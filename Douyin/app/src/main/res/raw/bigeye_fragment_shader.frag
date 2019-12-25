@@ -18,7 +18,7 @@ float fs(float r,float rmax){
 }
 
 //根据需要采集的点 aCoord 计算新的点(可能是需要改变为眼睛内部的点，完成放大的效果)
-vec2 newCoord(vec2 coord, vec2 eye, float rmax){
+vec2 getNewCoord(vec2 coord, vec2 eye, float rmax){
     vec2 newCoord = coord;
     //获得当前需要采集的点与眼睛的距离
     float r = distance(coord,eye);
@@ -40,8 +40,8 @@ void main(){
     float rmax = distance(left_eye,right_eye)/2.0;
     // 如果属于 左眼 放大区域的点 得到的就是 左眼里面的某一个点（完成放大效果）
     // 如果属于 右眼放大区域的点 或者都不属于 ，那么 newCoord还是 aCoord
-    vec2 newCoord = newCoord(aCoord, left_eye, rmax);
-    newCoord = newCoord(newCoord, right_eye, rmax);
+    vec2 newCoord = getNewCoord(aCoord, left_eye, rmax);
+    newCoord = getNewCoord(newCoord, right_eye, rmax);
    //  采集到 RGBA 值
     gl_FragColor = texture2D(vTexture, newCoord);
 }
