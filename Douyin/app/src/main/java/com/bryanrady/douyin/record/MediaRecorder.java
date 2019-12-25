@@ -9,6 +9,7 @@ import android.opengl.EGLContext;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.util.Log;
 import android.view.Surface;
 
 import java.io.IOException;
@@ -26,15 +27,16 @@ public class MediaRecorder {
     private final EGLContext mEglContext;   //绘制线程的EGL上下文,从渲染器中拿
     private float mSpeed;
     private int mBitrate = 1500_000;
-    private int mFrameRate = 20;
-    private MediaCodec mMediaCodec;
+    private int mFps = 20;
+    private MediaCodec mMediaEncodeCodec;
     private Surface mInputSurface;
     private MediaMuxer mMediaMuxer;
     private Handler mHandler;
     private EGLBase mEglBase;
     private boolean mIsStart = false;
     private int mIndex;
-
+    private long mLastTimsUs;
+    private OnRecordFinishedListener mOnRecordFinishedListener;
 
     /**
      * 除了这些参数外，还可以让码率 帧率等参数
@@ -56,8 +58,8 @@ public class MediaRecorder {
         mBitrate = bitrate;
     }
 
-    public void setFrameRate(int frameRate) {
-        this.mFrameRate = frameRate;
+    public void setFps(int fps) {
+        this.mFps = fps;
     }
 
     /**
@@ -83,20 +85,20 @@ public class MediaRecorder {
         //码率
         videoFormat.setInteger(MediaFormat.KEY_BIT_RATE, mBitrate);
         //帧率
-        videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mFrameRate);
+        videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mFps);
         //关键帧间隔
         videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 20);
         //设置视频输入颜色格式，这里选择使用Surface作为输入，可以忽略颜色格式的问题，并且不需要直接操作输入缓冲区。
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
 
-        //创建编码器
-        mMediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
+        //创建AVC类型的编码器
+        mMediaEncodeCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
         //将参数配置交给编码器
-        mMediaCodec.configure(videoFormat,null,null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        mMediaEncodeCodec.configure(videoFormat,null,null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 
         //创建Surface 然后交给虚拟屏幕 通过OpenGL 将预览的纹理 绘制到这一个虚拟屏幕中
         //这样MediaCodec 就会自动编码 inputSurface 中的图像
-        mInputSurface = mMediaCodec.createInputSurface();
+        mInputSurface = mMediaEncodeCodec.createInputSurface();
 
         //播放流程：mp4文件--》解封装(解复用)--》得到音频流和视频流--》对流进行解码--》绘制
         //new MediaExtractor(); 解封装器(解复用器)
@@ -128,7 +130,7 @@ public class MediaRecorder {
                 //创建EGL环境 (显示设备、虚拟设备、EGL上下文等)
                 mEglBase = new EGLBase(mContext, mWidth, mHeight, mInputSurface, mEglContext);
                 //启动编码器
-                mMediaCodec.start();
+                mMediaEncodeCodec.start();
                 mIsStart = true;
             }
         });
@@ -162,32 +164,32 @@ public class MediaRecorder {
     private void getCodec(boolean endOfStream) {
         //不录了， 给mediacodec一个标记
         if (endOfStream) {
-            mMediaCodec.signalEndOfInputStream();
+            mMediaEncodeCodec.signalEndOfInputStream();
         }
         //输出缓冲区
         MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
         while (true){
             //等待10 ms
-            int status = mMediaCodec.dequeueOutputBuffer(bufferInfo, 10_000);
-            if(status == MediaCodec.INFO_TRY_AGAIN_LATER){  //不断地重试, 表示需要更多的数据才能编码出图像
+            int index = mMediaEncodeCodec.dequeueOutputBuffer(bufferInfo, 10_000);
+            if(index == MediaCodec.INFO_TRY_AGAIN_LATER){  //不断地重试, 表示需要更多的数据才能编码出图像
                 // 如果是停止录制，我就继续循环，继续循环就表示不会接收到新的等待编码的图像，
                 // 相当于保证MediaCodec中所有采集到的数据也就是待编码的数据都能被编码完成，不断地重试 取出编码器中的编码好的数据
                 // 如果标记不是停止，我们退出，下一轮接收到更多数据再来取输出编码后的数据
                 if(!endOfStream){
                     break;
                 }
-            }else if(status == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
+            }else if(index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
                 //开始编码 就会调用一次
-                MediaFormat outputFormat = mMediaCodec.getOutputFormat();
+                MediaFormat outputFormat = mMediaEncodeCodec.getOutputFormat();
                 //配置封装器
                 // 增加一路指定格式的媒体流 视频
                 mIndex = mMediaMuxer.addTrack(outputFormat);
                 mMediaMuxer.start();
-            } else if (status == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
+            } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 //忽略
             } else {
                 //成功 取出一个有效的输出图像
-                ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(status);
+                ByteBuffer outputBuffer = mMediaEncodeCodec.getOutputBuffer(index);
                 //如果获取的ByteBuffer 是配置信息 ,不需要写到mp4
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                     bufferInfo.size = 0;
@@ -195,6 +197,16 @@ public class MediaRecorder {
                 if (bufferInfo.size != 0) {
                     //实现 快慢的录制 修改时间戳就可以了
                     bufferInfo.presentationTimeUs = (long) (bufferInfo.presentationTimeUs / mSpeed);
+
+                    //偶尔出现：timestampUs 196608 < lastTimestampUs 196619 for Video track
+                    //意思是这次的时间戳 比上次还小，做个判断
+                    if (bufferInfo.presentationTimeUs < mLastTimsUs){
+                        // 增加 1微妙 / 20帧率 / 速率
+                        bufferInfo.presentationTimeUs = (long) (mLastTimsUs + 1_000_000/20/mSpeed);
+                    }
+                    Log.e("Record","时间戳：" + bufferInfo.presentationTimeUs + " last:" + mLastTimsUs);
+                    mLastTimsUs =  bufferInfo.presentationTimeUs;
+
                     //写到mp4
                     //根据偏移定位
                     outputBuffer.position(bufferInfo.offset);
@@ -202,10 +214,11 @@ public class MediaRecorder {
                     outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
                     //写出
                     mMediaMuxer.writeSampleData(mIndex, outputBuffer, bufferInfo);
+
                 }
-                //输出缓冲区 我们就使用完了，可以回收了，让mediacodec继续使用
-                mMediaCodec.releaseOutputBuffer(status, false);
-                //结束
+                //输出缓冲区 我们就使用完了，可以回收了，让MediaCodec继续使用
+                mMediaEncodeCodec.releaseOutputBuffer(index, false);
+                //结束 全部编码完成
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                     break;
                 }
@@ -220,12 +233,14 @@ public class MediaRecorder {
             public void run() {
                 //不录了，给一个标记停止录制
                 getCodec(true);
-                mMediaCodec.stop();
-                mMediaCodec.release();
-                mMediaCodec = null;
+
+                mMediaEncodeCodec.stop();
+                mMediaEncodeCodec.release();
+                mMediaEncodeCodec = null;
                 mMediaMuxer.stop();
                 mMediaMuxer.release();
                 mMediaMuxer = null;
+
                 mEglBase.release();
                 mEglBase = null;
                 //这句不能加
@@ -233,8 +248,20 @@ public class MediaRecorder {
                 mInputSurface = null;
                 mHandler.getLooper().quitSafely();
                 mHandler = null;
+                //录制完成，通过回调借口回调出去 并把录制的视频地址传出去
+                if (null != mOnRecordFinishedListener){
+                    mOnRecordFinishedListener.onRecordFinished(mPath);
+                }
             }
         });
+    }
+
+    public void setOnRecordFinishedListener(OnRecordFinishedListener listener){
+        mOnRecordFinishedListener = listener;
+    }
+
+    public interface OnRecordFinishedListener{
+        void onRecordFinished(String path);
     }
 
 }

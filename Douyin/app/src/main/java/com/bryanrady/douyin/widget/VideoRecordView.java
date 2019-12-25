@@ -5,6 +5,8 @@ import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 import android.view.SurfaceHolder;
 
+import com.bryanrady.douyin.record.MediaRecorder;
+
 /**
  * GLSurfaceView 集成至 SurfaceView  它内嵌的Surface专门负责OpenGL的渲染
  *      管理Surface 与 EGL
@@ -13,7 +15,7 @@ import android.view.SurfaceHolder;
  *
  *      支持按需渲染和连续渲染
  */
-public class DouYinView extends GLSurfaceView {
+public class VideoRecordView extends GLSurfaceView {
 
     public enum Speed {
         MODE_EXTRA_SLOW, MODE_SLOW, MODE_NORMAL, MODE_FAST, MODE_EXTRA_FAST
@@ -22,13 +24,13 @@ public class DouYinView extends GLSurfaceView {
     //默认正常速度
     private Speed RECORD_SPEED = Speed.MODE_NORMAL;
 
-    public DouYinRenderer mDouYinRenderer;
+    public VideoRecordRenderer mVideoRecordRenderer;
 
-    public DouYinView(Context context) {
+    public VideoRecordView(Context context) {
         this(context,null);
     }
 
-    public DouYinView(Context context, AttributeSet attrs) {
+    public VideoRecordView(Context context, AttributeSet attrs) {
         super(context, attrs);
         /**
          * 配置GLSurfaceView
@@ -36,18 +38,18 @@ public class DouYinView extends GLSurfaceView {
         //设置EGL版本
         setEGLContextClientVersion(2);
         //设置渲染器
-        mDouYinRenderer = new DouYinRenderer(this);
-        setRenderer(mDouYinRenderer);
+        mVideoRecordRenderer = new VideoRecordRenderer(this);
+        setRenderer(mVideoRecordRenderer);
         //设置渲染模式
         //按需渲染   RENDERMODE_WHEN_DIRTY     就是手动调用 requestRender 请求GLThread 回调一次 onDrawFrame
         //连续渲染   RENDERMODE_CONTINUOUSLY   就是自动的回调 onDrawFrame
-        setRenderMode(RENDERMODE_CONTINUOUSLY);
+        setRenderMode(RENDERMODE_WHEN_DIRTY);
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         super.surfaceDestroyed(holder);
-        mDouYinRenderer.onSurfaceDestroyed();
+        mVideoRecordRenderer.onSurfaceDestroyed();
     }
 
     public void setSpeed(Speed speed){
@@ -73,23 +75,31 @@ public class DouYinView extends GLSurfaceView {
                 speed = 3.f;
                 break;
         }
-        mDouYinRenderer.startRecord(speed);
+        mVideoRecordRenderer.startRecord(speed);
     }
 
     public void stopRecord() {
-        mDouYinRenderer.stopRecord();
+        mVideoRecordRenderer.stopRecord();
     }
 
     public void enableBigEye(boolean isChecked) {
-        mDouYinRenderer.enableBigEye(isChecked);
+        mVideoRecordRenderer.enableBigEye(isChecked);
     }
 
     public void enableSticker(boolean isChecked) {
-        mDouYinRenderer.enableSticker(isChecked);
+        mVideoRecordRenderer.enableSticker(isChecked);
     }
 
     public void enableBeauty(boolean isChecked) {
-        mDouYinRenderer.enableBeauty(isChecked);
+        mVideoRecordRenderer.enableBeauty(isChecked);
+    }
+
+    public void switchCamera() {
+        mVideoRecordRenderer.switchCamera();
+    }
+
+    public void setOnRecordFinishedListener(MediaRecorder.OnRecordFinishedListener listener){
+        mVideoRecordRenderer.setOnRecordFinishedListener(listener);
     }
 
 }

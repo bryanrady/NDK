@@ -17,6 +17,7 @@ import com.bryanrady.douyin.filter.StickerFilter;
 import com.bryanrady.douyin.record.MediaRecorder;
 import com.bryanrady.douyin.util.CameraHelper;
 import com.bryanrady.douyin.util.OpenGLUtils;
+import com.bryanrady.douyin.widget.VideoRecordView;
 
 import java.io.IOException;
 
@@ -26,13 +27,13 @@ import javax.microedition.khronos.opengles.GL10;
 /**
  * 自定义GLSurfaceView的渲染器
  */
-public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener, Camera.PreviewCallback {
+public class VideoRecordRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener, Camera.PreviewCallback {
     private ScreenFilter mScreenFilter;
     private CameraFilter mCameraFilter;
     private BigEyeFilter mBigEyeFilter;
     private StickerFilter mStickerFilter;
     private BeautyFilter mBeautyFilter;
-    private DouYinView mDouYinView;
+    private VideoRecordView mVideoRecordView;
     private CameraHelper mCameraHelper;
     private SurfaceTexture mSurfaceTexture;
     private int[] mTextures;
@@ -41,16 +42,17 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     private FaceTrack mFaceTrack;
     private int mWidth;
     private int mHeight;
+    private MediaRecorder.OnRecordFinishedListener mOnRecordFinishedListener;
 
-    public DouYinRenderer(DouYinView douYinView){
-        this.mDouYinView = douYinView;
+    public VideoRecordRenderer(VideoRecordView videoRecordView){
+        this.mVideoRecordView = videoRecordView;
         //注意：我们使用OpenGL必须在GLThread线程，而这个渲染器的构造方法不是在GLThread线程中
         //mScreenFilter = new ScreenFilter(mDouYinView.getContext());
 
         //拷贝 模型
-        OpenGLUtils.copyAssets2SdCard(mDouYinView.getContext(), "lbpcascade_frontalface.xml",
+        OpenGLUtils.copyAssets2SdCard(mVideoRecordView.getContext(), "lbpcascade_frontalface.xml",
                 "/sdcard/lbpcascade_frontalface.xml");
-        OpenGLUtils.copyAssets2SdCard(mDouYinView.getContext(), "seeta_fa_v1.1.bin",
+        OpenGLUtils.copyAssets2SdCard(mVideoRecordView.getContext(), "seeta_fa_v1.1.bin",
                 "/sdcard/seeta_fa_v1.1.bin");
     }
 
@@ -71,14 +73,15 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mSurfaceTexture = new SurfaceTexture(mTextures[0]);
         mSurfaceTexture.setOnFrameAvailableListener(this);
         //用来渲染图像数据
-        mScreenFilter = new ScreenFilter(mDouYinView.getContext());
+        mScreenFilter = new ScreenFilter(mVideoRecordView.getContext());
         //用来写到FBO缓存
-        mCameraFilter = new CameraFilter(mDouYinView.getContext());
+        mCameraFilter = new CameraFilter(mVideoRecordView.getContext());
 
         //渲染线程的EGL上下文
         EGLContext eglContext = EGL14.eglGetCurrentContext();
         //这里宽高交换一下 因为我们把摄像头旋转了的
-        mMediaRecorder = new MediaRecorder(mDouYinView.getContext(),"/sdcard/a.mp4", CameraHelper.HEIGHT, CameraHelper.WIDTH, eglContext);
+        mMediaRecorder = new MediaRecorder(mVideoRecordView.getContext(),"/sdcard/a.mp4", CameraHelper.HEIGHT, CameraHelper.WIDTH, eglContext);
+        mMediaRecorder.setOnRecordFinishedListener(mOnRecordFinishedListener);
     }
 
     /**
@@ -169,7 +172,7 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
         //有一个新的图像后,通过调用requestRender就请求GLThread 回调一次 onDrawFrame()
-        mDouYinView.requestRender();
+        mVideoRecordView.requestRender();
     }
 
     /**
@@ -202,13 +205,13 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     }
 
     public void enableBigEye(final boolean isChecked) {
-        mDouYinView.queueEvent(new Runnable() {
+        mVideoRecordView.queueEvent(new Runnable() {
             @Override
             public void run() {
                 //OpenGL线程
                 if (isChecked) {
                     //用来实现大眼效果
-                    mBigEyeFilter = new BigEyeFilter(mDouYinView.getContext());
+                    mBigEyeFilter = new BigEyeFilter(mVideoRecordView.getContext());
                     mBigEyeFilter.onReady(mWidth,mHeight);
                 } else {
                     mBigEyeFilter.release();
@@ -219,13 +222,13 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     }
 
     public void enableSticker(final boolean isChecked) {
-        mDouYinView.queueEvent(new Runnable() {
+        mVideoRecordView.queueEvent(new Runnable() {
             @Override
             public void run() {
                 //OpenGL线程
                 if (isChecked) {
                     //用来添加贴纸效果
-                    mStickerFilter = new StickerFilter(mDouYinView.getContext());
+                    mStickerFilter = new StickerFilter(mVideoRecordView.getContext());
                     mStickerFilter.onReady(mWidth,mHeight);
                 } else {
                     mStickerFilter.release();
@@ -238,12 +241,12 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     public void enableBeauty(final boolean isChecked) {
         //向GL线程发布一个任务
         //任务会放入一个任务队列， 并在gl线程中去执行
-        mDouYinView.queueEvent(new Runnable() {
+        mVideoRecordView.queueEvent(new Runnable() {
             @Override
             public void run() {
                 //OpenGL线程
                 if (isChecked) {
-                    mBeautyFilter = new BeautyFilter(mDouYinView.getContext());
+                    mBeautyFilter = new BeautyFilter(mVideoRecordView.getContext());
                     mBeautyFilter.onReady(mWidth, mHeight);
                 } else {
                     mBeautyFilter.release();
@@ -252,4 +255,16 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
             }
         });
     }
+
+    public void switchCamera() {
+        mCameraHelper.switchCamera();
+    }
+
+    public void setOnRecordFinishedListener(MediaRecorder.OnRecordFinishedListener listener){
+        if (mMediaRecorder != null){
+            mMediaRecorder.setOnRecordFinishedListener(listener);
+        }
+        mOnRecordFinishedListener = listener;
+    }
+
 }

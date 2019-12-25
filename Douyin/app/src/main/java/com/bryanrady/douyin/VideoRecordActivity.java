@@ -5,22 +5,27 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.RadioGroup;
+import android.widget.TextView;
 
-import com.bryanrady.douyin.widget.DouYinView;
-import com.bryanrady.douyin.widget.RecordButton;
+import com.bryanrady.douyin.record.MediaRecorder;
+import com.bryanrady.douyin.widget.VideoRecordView;
+import com.bryanrady.douyin.widget.VideoRecordButton;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
-public class MainActivity extends AppCompatActivity {
+public class VideoRecordActivity extends AppCompatActivity {
 
-    DouYinView mDouYinView;
-    RecordButton mRecordButton;
+    VideoRecordView mVideoRecordView;
+    VideoRecordButton mVideoRecordButton;
     RadioGroup mRadioGroup;
+    TextView mSwitchCamera;
     CheckBox mBigEye;
     CheckBox mSticker;
     CheckBox mBeauty;
@@ -28,10 +33,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        mDouYinView = findViewById(R.id.douYinView);
-        mRecordButton = findViewById(R.id.btn_record);
+        setContentView(R.layout.activity_camera_preview);
+        mVideoRecordView = findViewById(R.id.videoRecordView);
+        mVideoRecordButton = findViewById(R.id.btn_record);
         mRadioGroup = findViewById(R.id.rg_speed);
+        mSwitchCamera = findViewById(R.id.switch_camera);
         mBigEye = findViewById(R.id.big_eye);
         mSticker = findViewById(R.id.sticker);
         mBeauty = findViewById(R.id.beauty);
@@ -46,15 +52,29 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        mRecordButton.setOnRecordListener(new RecordButton.OnRecordListener() {
+        mVideoRecordView.setOnRecordFinishedListener(new MediaRecorder.OnRecordFinishedListener() {
+            @Override
+            public void onRecordFinished(final String path) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Intent intent = new Intent(VideoRecordActivity.this, VideoPlayActivity.class);
+                        intent.putExtra("path", path);
+                        startActivity(intent);
+                    }
+                });
+            }
+        });
+
+        mVideoRecordButton.setOnRecordListener(new VideoRecordButton.OnRecordListener() {
             @Override
             public void onRecordStart() {
-                mDouYinView.startRecord();
+                mVideoRecordView.startRecord();
             }
 
             @Override
             public void onRecordStop() {
-                mDouYinView.stopRecord();
+                mVideoRecordView.stopRecord();
             }
         });
 
@@ -63,42 +83,49 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 switch (checkedId){
                     case R.id.rb_extra_slow: //极慢
-                        mDouYinView.setSpeed(DouYinView.Speed.MODE_EXTRA_SLOW);
+                        mVideoRecordView.setSpeed(VideoRecordView.Speed.MODE_EXTRA_SLOW);
                         break;
                     case R.id.rb_slow:      //慢
-                        mDouYinView.setSpeed(DouYinView.Speed.MODE_SLOW);
+                        mVideoRecordView.setSpeed(VideoRecordView.Speed.MODE_SLOW);
                         break;
                     case R.id.rb_normal:    //标准
-                        mDouYinView.setSpeed(DouYinView.Speed.MODE_NORMAL);
+                        mVideoRecordView.setSpeed(VideoRecordView.Speed.MODE_NORMAL);
                         break;
                     case R.id.rb_fast:      //快
-                        mDouYinView.setSpeed(DouYinView.Speed.MODE_FAST);
+                        mVideoRecordView.setSpeed(VideoRecordView.Speed.MODE_FAST);
                         break;
                     case R.id.rb_extra_fast: //极快
-                        mDouYinView.setSpeed(DouYinView.Speed.MODE_EXTRA_FAST);
+                        mVideoRecordView.setSpeed(VideoRecordView.Speed.MODE_EXTRA_FAST);
                         break;
                 }
+            }
+        });
+
+        mSwitchCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mVideoRecordView.switchCamera();
             }
         });
 
         mBigEye.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mDouYinView.enableBigEye(isChecked);
+                mVideoRecordView.enableBigEye(isChecked);
             }
         });
 
         mSticker.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mDouYinView.enableSticker(isChecked);
+                mVideoRecordView.enableSticker(isChecked);
             }
         });
 
         mBeauty.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mDouYinView.enableBeauty(isChecked);
+                mVideoRecordView.enableBeauty(isChecked);
             }
         });
     }

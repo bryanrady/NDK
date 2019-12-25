@@ -3,8 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.bryanrady.douyin.widget.DouYinView
-        android:id="@+id/douYinView"
+    <com.bryanrady.douyin.widget.VideoRecordView
+        android:id="@+id/videoRecordView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
@@ -70,7 +70,7 @@
             android:textColor="@drawable/record_speed_button_text"/>
     </RadioGroup>
 
-    <com.bryanrady.douyin.widget.RecordButton
+    <com.bryanrady.douyin.widget.VideoRecordButton
         android:id="@+id/btn_record"
         android:layout_width="80dp"
         android:layout_height="80dp"
@@ -81,8 +81,18 @@
         android:gravity="center"
         android:text="按住拍" />
 
+    <TextView
+        android:id="@+id/switch_camera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="10dp"
+        android:text="切换摄像头"/>
+
     <CheckBox
         android:id="@+id/big_eye"
+        android:layout_below="@+id/switch_camera"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentRight="true"

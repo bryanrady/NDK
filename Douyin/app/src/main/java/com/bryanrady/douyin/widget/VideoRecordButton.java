@@ -6,19 +6,19 @@ import android.view.MotionEvent;
 
 import androidx.appcompat.widget.AppCompatTextView;
 
-public class RecordButton extends AppCompatTextView {
+public class VideoRecordButton extends AppCompatTextView {
 
     private OnRecordListener mOnRecordListener;
 
-    public RecordButton(Context context) {
+    public VideoRecordButton(Context context) {
         this(context,null);
     }
 
-    public RecordButton(Context context, AttributeSet attrs) {
+    public VideoRecordButton(Context context, AttributeSet attrs) {
         this(context,attrs,0);
     }
 
-    public RecordButton(Context context, AttributeSet attrs, int defStyleAttr) {
+    public VideoRecordButton(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
