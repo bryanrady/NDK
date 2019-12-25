@@ -80,4 +80,16 @@ public class DouYinView extends GLSurfaceView {
         mDouYinRenderer.stopRecord();
     }
 
+    public void enableBigEye(boolean isChecked) {
+        mDouYinRenderer.enableBigEye(isChecked);
+    }
+
+    public void enableSticker(boolean isChecked) {
+        mDouYinRenderer.enableSticker(isChecked);
+    }
+
+    public void enableBeauty(boolean isChecked) {
+        mDouYinRenderer.enableBeauty(isChecked);
+    }
+
 }

@@ -81,4 +81,33 @@
         android:gravity="center"
         android:text="按住拍" />
 
+    <CheckBox
+        android:id="@+id/big_eye"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="10dp"
+        android:text="大眼"/>
+
+    <CheckBox
+        android:id="@+id/sticker"
+        android:layout_below="@+id/big_eye"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="10dp"
+        android:text="贴纸"/>
+
+    <CheckBox
+        android:id="@+id/beauty"
+        android:layout_below="@+id/sticker"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="10dp"
+        android:text="美颜"/>
+
 </RelativeLayout>

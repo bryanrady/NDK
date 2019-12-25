@@ -60,7 +60,7 @@ public class CameraFilter extends AbstractFrameFilter {
         //设置显示窗口
         GLES20.glViewport(0, 0, mOutputWidth, mOutputHeight);
 
-        //不调用的话就是默认的操作glsurfaceview中的纹理了。显示到屏幕上了
+        //不调用的话就是默认的操作GLSurfaceView中的纹理了,显示到屏幕上了
         //这里我们还只是把它画到fbo中(缓存)
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER,mFrameBuffers[0]);
 

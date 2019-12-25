@@ -6,14 +6,14 @@ import android.opengl.EGL14;
 import android.opengl.EGLContext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.util.Log;
 
 import com.bryanrady.douyin.face.Face;
 import com.bryanrady.douyin.face.FaceTrack;
+import com.bryanrady.douyin.filter.BeautyFilter;
 import com.bryanrady.douyin.filter.BigEyeFilter;
 import com.bryanrady.douyin.filter.CameraFilter;
 import com.bryanrady.douyin.filter.ScreenFilter;
-import com.bryanrady.douyin.filter.StickFilter;
+import com.bryanrady.douyin.filter.StickerFilter;
 import com.bryanrady.douyin.record.MediaRecorder;
 import com.bryanrady.douyin.util.CameraHelper;
 import com.bryanrady.douyin.util.OpenGLUtils;
@@ -30,7 +30,8 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     private ScreenFilter mScreenFilter;
     private CameraFilter mCameraFilter;
     private BigEyeFilter mBigEyeFilter;
-    private StickFilter mStickFilter;
+    private StickerFilter mStickerFilter;
+    private BeautyFilter mBeautyFilter;
     private DouYinView mDouYinView;
     private CameraHelper mCameraHelper;
     private SurfaceTexture mSurfaceTexture;
@@ -38,6 +39,8 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     private float[] mMtx = new float[16];
     private MediaRecorder mMediaRecorder;
     private FaceTrack mFaceTrack;
+    private int mWidth;
+    private int mHeight;
 
     public DouYinRenderer(DouYinView douYinView){
         this.mDouYinView = douYinView;
@@ -71,10 +74,6 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mScreenFilter = new ScreenFilter(mDouYinView.getContext());
         //用来写到FBO缓存
         mCameraFilter = new CameraFilter(mDouYinView.getContext());
-        //用来实现大眼效果
-        mBigEyeFilter = new BigEyeFilter(mDouYinView.getContext());
-        //用来添加贴纸效果
-        mStickFilter = new StickFilter(mDouYinView.getContext());
 
         //渲染线程的EGL上下文
         EGLContext eglContext = EGL14.eglGetCurrentContext();
@@ -90,6 +89,9 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
      */
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
+        mWidth = width;
+        mHeight = height;
+
         // 创建跟踪器
         mFaceTrack = new FaceTrack("/sdcard/lbpcascade_frontalface.xml", "/sdcard/seeta_fa_v1.1.bin", mCameraHelper);
         //启动跟踪器
@@ -98,8 +100,6 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mCameraHelper.startPreview(mSurfaceTexture);
         //设置画布大小
         mCameraFilter.onReady(width, height);
-        mBigEyeFilter.onReady(width, height);
-        mStickFilter.onReady(width, height);
         mScreenFilter.onReady(width, height);
     }
 
@@ -140,18 +140,24 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         //....
         Face face = mFaceTrack.getFace();
         if (face != null) {
-            Log.e("face", face.toString());
+        //    Log.e("face", face.toString());
             //加上大眼效果
-//            mBigEyeFilter.setFace(mFaceTrack.getFace());
-//            textureId = mBigEyeFilter.onDrawFrame(textureId);
+            if(mBigEyeFilter != null){
+                mBigEyeFilter.setFace(mFaceTrack.getFace());
+                textureId = mBigEyeFilter.onDrawFrame(textureId);
+            }
             //加上贴纸效果
-            mStickFilter.setFace(mFaceTrack.getFace());
-            textureId = mStickFilter.onDrawFrame(textureId);
+            if(mStickerFilter != null){
+                mStickerFilter.setFace(mFaceTrack.getFace());
+                textureId = mStickerFilter.onDrawFrame(textureId);
+            }
+            if(mBeautyFilter != null){
+                textureId = mBeautyFilter.onDrawFrame(textureId);
+            }
         }
 
         //加完效果之后再显示到屏幕中去
         mScreenFilter.onDrawFrame(textureId);
-
         //进行视频录制
         mMediaRecorder.fireFrame(textureId, mSurfaceTexture.getTimestamp());
     }
@@ -193,5 +199,57 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         //onPreviewFrame这个方法实在子线程中进行，所以我们可以通过HandlerThread进行子线程通知子线程
 
         mFaceTrack.detector(data);
+    }
+
+    public void enableBigEye(final boolean isChecked) {
+        mDouYinView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                //OpenGL线程
+                if (isChecked) {
+                    //用来实现大眼效果
+                    mBigEyeFilter = new BigEyeFilter(mDouYinView.getContext());
+                    mBigEyeFilter.onReady(mWidth,mHeight);
+                } else {
+                    mBigEyeFilter.release();
+                    mBigEyeFilter = null;
+                }
+            }
+        });
+    }
+
+    public void enableSticker(final boolean isChecked) {
+        mDouYinView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                //OpenGL线程
+                if (isChecked) {
+                    //用来添加贴纸效果
+                    mStickerFilter = new StickerFilter(mDouYinView.getContext());
+                    mStickerFilter.onReady(mWidth,mHeight);
+                } else {
+                    mStickerFilter.release();
+                    mStickerFilter = null;
+                }
+            }
+        });
+    }
+
+    public void enableBeauty(final boolean isChecked) {
+        //向GL线程发布一个任务
+        //任务会放入一个任务队列， 并在gl线程中去执行
+        mDouYinView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                //OpenGL线程
+                if (isChecked) {
+                    mBeautyFilter = new BeautyFilter(mDouYinView.getContext());
+                    mBeautyFilter.onReady(mWidth, mHeight);
+                } else {
+                    mBeautyFilter.release();
+                    mBeautyFilter = null;
+                }
+            }
+        });
     }
 }

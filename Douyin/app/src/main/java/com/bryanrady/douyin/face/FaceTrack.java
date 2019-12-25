@@ -75,7 +75,6 @@ public class FaceTrack {
 
     private native void native_stop(long self);
 
-    private native Face native_detector(long self, byte[] data, int cameraId, int width, int
-            height);
+    private native Face native_detector(long self, byte[] data, int cameraId, int width, int height);
 
 }

@@ -11,17 +11,17 @@ import com.bryanrady.douyin.face.Face;
 import com.bryanrady.douyin.util.OpenGLUtils;
 
 /**
- * 贴纸滤镜
+ * 贴纸
  */
-public class StickFilter extends AbstractFrameFilter {
+public class StickerFilter extends AbstractFrameFilter {
 
-    private Bitmap mStickBitmap;
+    private Bitmap mStickerBitmap;
     private int[] mBitmapTextures;
     private Face mFace;
 
-    public StickFilter(Context context) {
+    public StickerFilter(Context context) {
         super(context.getApplicationContext(), R.raw.base_vertex_shader, R.raw.base_fragment_shader);
-        mStickBitmap = BitmapFactory.decodeResource(context.getApplicationContext().getResources(), R.drawable.erduo_000,null);
+        mStickerBitmap = BitmapFactory.decodeResource(context.getApplicationContext().getResources(), R.drawable.erduo_000,null);
     }
 
     public void setFace(Face face){
@@ -36,7 +36,7 @@ public class StickFilter extends AbstractFrameFilter {
         //表示后续的操作 就是作用于这个纹理上
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mBitmapTextures[0]);
         //将Bitmap与Bitmap的纹理id发生关系
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D,0, mStickBitmap, 0);
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D,0, mStickerBitmap, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
     }
 
@@ -47,7 +47,7 @@ public class StickFilter extends AbstractFrameFilter {
         }
         //设置显示窗口
         GLES20.glViewport(0, 0, mOutputWidth, mOutputHeight);
-        //不调用的话就是默认的操作glsurfaceview中的纹理了。显示到屏幕上了
+        //不调用的话就是默认的操作GLSurfaceView中的纹理了,显示到屏幕上了
         //这里我们还只是把它画到fbo中(缓存)
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffers[0]);
         //使用着色器程序
@@ -103,9 +103,9 @@ public class StickFilter extends AbstractFrameFilter {
         //mFace.width： 人脸的宽
         GLES20.glViewport(
                 (int)x,
-                (int)y - mStickBitmap.getHeight()/2,
+                (int)((int)y - mStickerBitmap.getHeight()/2),
                 (int)((float)mFace.width /mFace.imgWidth * mOutputWidth),
-                mStickBitmap.getHeight());
+                mStickerBitmap.getHeight());
 
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffers[0]);
         //使用着色器
@@ -137,8 +137,8 @@ public class StickFilter extends AbstractFrameFilter {
     @Override
     public void release() {
         super.release();
-        if(!mStickBitmap.isRecycled()){
-            mStickBitmap.recycle();
+        if(!mStickerBitmap.isRecycled()){
+            mStickerBitmap.recycle();
         }
     }
 }
