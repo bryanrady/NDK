@@ -15,6 +15,21 @@ public class AbstractFrameFilter extends AbstractFilter{
     }
 
     @Override
+    protected void changeCoordinate() {
+        super.changeCoordinate();
+        //父类的坐标是根据android屏幕坐标得来的
+        mGLTextureBuffer.clear();
+        //从OpenGL画到OpenGL 不是画到屏幕，所以要通过纹理坐标来获得 修改坐标
+        float[] TEXTURE = {
+                0.0f, 0.0f,
+                1.0f, 0.0f,
+                0.0f, 1.0f,
+                1.0f, 1.0f
+        };
+        mGLTextureBuffer.put(TEXTURE);
+    }
+
+    @Override
     public void onReady(int width, int height) {
         super.onReady(width, height);
         if (mFrameBuffers != null) {

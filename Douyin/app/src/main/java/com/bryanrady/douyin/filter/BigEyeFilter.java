@@ -37,21 +37,6 @@ public class BigEyeFilter extends AbstractFrameFilter {
     }
 
     @Override
-    protected void changeCoordinate() {
-        super.changeCoordinate();
-        //父类的坐标是根据android屏幕坐标得来的
-        mGLTextureBuffer.clear();
-        //从OpenGL画到OpenGL 不是画到屏幕，所以要通过纹理坐标来获得 修改坐标
-        float[] TEXTURE = {
-                0.0f, 0.0f,
-                1.0f, 0.0f,
-                0.0f, 1.0f,
-                1.0f, 1.0f
-        };
-        mGLTextureBuffer.put(TEXTURE);
-    }
-
-    @Override
     public int onDrawFrame(int textureId) {
         if (null == mFace) {
             return textureId;
@@ -74,7 +59,6 @@ public class BigEyeFilter extends AbstractFrameFilter {
         mGLTextureBuffer.position(0);
         GLES20.glVertexAttribPointer(mVCoord, 2, GLES20.GL_FLOAT, false, 0, mGLTextureBuffer);
         GLES20.glEnableVertexAttribArray(mVCoord);
-
 
         /**
          * 传递眼睛的坐标 给GLSL
@@ -109,6 +93,7 @@ public class BigEyeFilter extends AbstractFrameFilter {
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+
         //返回fbo的纹理id
         return mFrameBufferTextures[0];
     }

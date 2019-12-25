@@ -6,11 +6,14 @@ import android.opengl.EGL14;
 import android.opengl.EGLContext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.util.Log;
 
+import com.bryanrady.douyin.face.Face;
 import com.bryanrady.douyin.face.FaceTrack;
 import com.bryanrady.douyin.filter.BigEyeFilter;
 import com.bryanrady.douyin.filter.CameraFilter;
 import com.bryanrady.douyin.filter.ScreenFilter;
+import com.bryanrady.douyin.filter.StickFilter;
 import com.bryanrady.douyin.record.MediaRecorder;
 import com.bryanrady.douyin.util.CameraHelper;
 import com.bryanrady.douyin.util.OpenGLUtils;
@@ -27,6 +30,7 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
     private ScreenFilter mScreenFilter;
     private CameraFilter mCameraFilter;
     private BigEyeFilter mBigEyeFilter;
+    private StickFilter mStickFilter;
     private DouYinView mDouYinView;
     private CameraHelper mCameraHelper;
     private SurfaceTexture mSurfaceTexture;
@@ -69,6 +73,8 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         mCameraFilter = new CameraFilter(mDouYinView.getContext());
         //用来实现大眼效果
         mBigEyeFilter = new BigEyeFilter(mDouYinView.getContext());
+        //用来添加贴纸效果
+        mStickFilter = new StickFilter(mDouYinView.getContext());
 
         //渲染线程的EGL上下文
         EGLContext eglContext = EGL14.eglGetCurrentContext();
@@ -93,6 +99,7 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         //设置画布大小
         mCameraFilter.onReady(width, height);
         mBigEyeFilter.onReady(width, height);
+        mStickFilter.onReady(width, height);
         mScreenFilter.onReady(width, height);
     }
 
@@ -131,12 +138,21 @@ public class DouYinRenderer implements GLSurfaceView.Renderer, SurfaceTexture.On
         // textureId  = 效果1.onDrawFrame(textureId);
         // textureId = 效果2.onDrawFrame(textureId);
         //....
-        mBigEyeFilter.setFace(mFaceTrack.getFace());
-        textureId = mBigEyeFilter.onDrawFrame(textureId);
+        Face face = mFaceTrack.getFace();
+        if (face != null) {
+            Log.e("face", face.toString());
+            //加上大眼效果
+//            mBigEyeFilter.setFace(mFaceTrack.getFace());
+//            textureId = mBigEyeFilter.onDrawFrame(textureId);
+            //加上贴纸效果
+            mStickFilter.setFace(mFaceTrack.getFace());
+            textureId = mStickFilter.onDrawFrame(textureId);
+        }
 
         //加完效果之后再显示到屏幕中去
         mScreenFilter.onDrawFrame(textureId);
-        //进行录制
+
+        //进行视频录制
         mMediaRecorder.fireFrame(textureId, mSurfaceTexture.getTimestamp());
     }
 
