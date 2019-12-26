@@ -72,6 +72,7 @@ public class VideoPlayView extends GLSurfaceView implements GLSurfaceView.Render
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
+        //设置显示窗口
         GLES20.glViewport(0,0, width, height);
     }
 
@@ -137,8 +138,5 @@ public class VideoPlayView extends GLSurfaceView implements GLSurfaceView.Render
         mBitrate = bitrate;
         mFps = fps;
         mInterval = 1000/mFps;
-        if (mSoulFilter != null){
-            mSoulFilter.onReady2(mWidth,mHeight,mFps);
-        }
     }
 }

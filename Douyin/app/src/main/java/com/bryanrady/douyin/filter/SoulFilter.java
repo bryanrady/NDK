@@ -28,7 +28,7 @@ public class SoulFilter extends AbstractFilter {
     private float[] mMatrix = new float[16];
 
     public SoulFilter(Context context) {
-        super(context.getApplicationContext(), R.raw.soul_vertex_shader, R.raw.soul_fragment_shader);
+        super(context.getApplicationContext(), R.raw.soul_vertex_shader, R.raw.soul_fragment_shader2);
         mBodyImage = new GLImage();
         mSoulImage = new GLImage();
         mSamplerY = GLES20.glGetUniformLocation(mGLProgramId, "sampler_y");
@@ -55,6 +55,7 @@ public class SoulFilter extends AbstractFilter {
         if (!mBodyImage.hasImage()){
             return;
         }
+
         //启用着色器程序
         GLES20.glUseProgram(mGLProgramId);
         //初始化矩阵 不进行任何缩放平移
@@ -73,11 +74,11 @@ public class SoulFilter extends AbstractFilter {
     private void onDrawBody(GLImage image){
         //传递坐标
         mGLVertexBuffer.position(0);
-        GLES20.glVertexAttribPointer(mVPosition, 2, GLES20.GL_FLOAT, false, 0, mGLVertexBuffer);
+        GLES20.glVertexAttribPointer(mVPosition,2, GLES20.GL_FLOAT,false,0, mGLVertexBuffer);
         GLES20.glEnableVertexAttribArray(mVPosition);
 
         mGLTextureBuffer.position(0);
-        GLES20.glVertexAttribPointer(mVCoord, 2, GLES20.GL_FLOAT, false, 0, mGLTextureBuffer);
+        GLES20.glVertexAttribPointer(mVCoord,2, GLES20.GL_FLOAT,false,0, mGLTextureBuffer);
         GLES20.glEnableVertexAttribArray(mVCoord);
 
         //传递yuv数据
@@ -144,7 +145,7 @@ public class SoulFilter extends AbstractFilter {
         //所以这里值为 1+1/60 ---> 1+20/40 1.025... ---> 1.5
         float scale = 1.0f + mInterval / (mFps * 2.f);
         Matrix.scaleM(mMatrix,0,scale,scale,0);
-        //给肉体的 无变化矩阵
+        //给灵魂的 变化矩阵
         GLES20.glUniformMatrix4fv(mVMatrix,1,false, mMatrix,0);
 
         //传递透明度 透明度值为0-1 渐渐降低 0.1+x/100 x为fps-[0~fps]

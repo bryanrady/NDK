@@ -166,7 +166,6 @@ public class MediaRecorder {
         if (endOfStream) {
             mMediaEncodeCodec.signalEndOfInputStream();
         }
-        //输出缓冲区
         MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
         while (true){
             //等待10 ms
@@ -188,7 +187,7 @@ public class MediaRecorder {
             } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 //忽略
             } else {
-                //成功 取出一个有效的输出图像
+                //成功 从输出缓冲区 取出一个有效的输出图像
                 ByteBuffer outputBuffer = mMediaEncodeCodec.getOutputBuffer(index);
                 //如果获取的ByteBuffer 是配置信息 ,不需要写到mp4
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {

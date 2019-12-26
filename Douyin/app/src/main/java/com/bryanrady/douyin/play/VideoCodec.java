@@ -160,8 +160,6 @@ public class VideoCodec {
                     //表示获取到一个有效的输出缓冲区，就是能够获取到了解码后的数据
                     ByteBuffer outputBuffer = mDecodeMediaCodec.getOutputBuffer(index);
                     //作一个容错判断
-                    Log.d("wangqingbin","bufferInfo.size=="+bufferInfo.size);
-                    Log.d("wangqingbin","mOutData.length=="+mOutData.length);
                     //p30的手机发现 bufferInfo.size  491520  mOutData.length 460800 不相等
                     if (bufferInfo.size >= mOutData.length){
                         //从输出缓冲区中取出数据 存到outData yuv420
@@ -170,9 +168,10 @@ public class VideoCodec {
                             //把数据加入到队列中，然后从队列中取出数据交给OpenGL进行绘制
                             mISurface.offer(mOutData);
                         }
+
+                        //释放掉这个输出缓冲区 释放
+                        mDecodeMediaCodec.releaseOutputBuffer(index,false);
                     }
-                    //释放掉这个输出缓冲区 释放
-                    mDecodeMediaCodec.releaseOutputBuffer(index,false);
                 }
                 //结束，全部解码完成了
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){

@@ -169,6 +169,8 @@ public abstract class AbstractFilter {
 
         //4. 参数传完了 通知OpenGL 画画 从第0点开始 共4个点
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP,0,4);
+
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
     }
 
     /**
