@@ -216,8 +216,10 @@ public class MediaRecorder {
                     mMediaMuxer.writeSampleData(mIndex, outputBuffer, bufferInfo);
 
                 }
+
                 //输出缓冲区 我们就使用完了，可以回收了，让MediaCodec继续使用
                 mMediaEncodeCodec.releaseOutputBuffer(index, false);
+
                 //结束 全部编码完成
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                     break;

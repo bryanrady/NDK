@@ -1,4 +1,4 @@
-package com.bryanrady.douyin.codec;
+package com.bryanrady.douyin.play;
 
 public interface ISurface {
 

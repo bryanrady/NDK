@@ -1,9 +1,10 @@
-package com.bryanrady.douyin.codec;
+package com.bryanrady.douyin.play;
 
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.util.Log;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -138,7 +139,7 @@ public class VideoCodec {
             if(mDecodeMediaCodec == null){
                 return;
             }
-            //开始解码
+            //开启解码器
             mDecodeMediaCodec.start();
 
             boolean isEOF = false;
@@ -159,7 +160,10 @@ public class VideoCodec {
                     //表示获取到一个有效的输出缓冲区，就是能够获取到了解码后的数据
                     ByteBuffer outputBuffer = mDecodeMediaCodec.getOutputBuffer(index);
                     //作一个容错判断
-                    if (bufferInfo.size == mOutData.length){
+                    Log.d("wangqingbin","bufferInfo.size=="+bufferInfo.size);
+                    Log.d("wangqingbin","mOutData.length=="+mOutData.length);
+                    //p30的手机发现 bufferInfo.size  491520  mOutData.length 460800 不相等
+                    if (bufferInfo.size >= mOutData.length){
                         //从输出缓冲区中取出数据 存到outData yuv420
                         outputBuffer.get(mOutData);
                         if (mISurface != null){
@@ -169,15 +173,6 @@ public class VideoCodec {
                     }
                     //释放掉这个输出缓冲区 释放
                     mDecodeMediaCodec.releaseOutputBuffer(index,false);
-                }else{
-                    //如果 < 0 可以不处理 就让它加入更多的数据 ，反正循环是一直在跑着的
-                    if(index == MediaCodec.INFO_TRY_AGAIN_LATER){
-                        //不断地重试, 表示需要更多的数据才能解码出图像
-                        //如果都完了，
-                        if(isEOF){
-                            break;
-                        }
-                    }
                 }
                 //结束，全部解码完成了
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){

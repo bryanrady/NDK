@@ -4,10 +4,11 @@ import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
-import com.bryanrady.douyin.codec.ISurface;
-import com.bryanrady.douyin.codec.VideoCodec;
+import com.bryanrady.douyin.play.ISurface;
+import com.bryanrady.douyin.play.VideoCodec;
 import com.bryanrady.douyin.filter.SoulFilter;
 
 import java.util.LinkedList;

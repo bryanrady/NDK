@@ -3,6 +3,7 @@ package com.bryanrady.douyin.filter;
 import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
+import android.util.Log;
 
 import com.bryanrady.douyin.R;
 import com.bryanrady.douyin.util.GLImage;
@@ -50,7 +51,7 @@ public class SoulFilter extends AbstractFilter {
     public void onDrawFrame(byte[] yuv) {
         //把yuv分离出来 保存在 image中的 y、u、v三个变量中
         mBodyImage.initData(yuv);
-        //分离出的数据有效
+        //判断分离出的数据是否有效
         if (!mBodyImage.hasImage()){
             return;
         }
@@ -79,39 +80,34 @@ public class SoulFilter extends AbstractFilter {
         GLES20.glVertexAttribPointer(mVCoord, 2, GLES20.GL_FLOAT, false, 0, mGLTextureBuffer);
         GLES20.glEnableVertexAttribArray(mVCoord);
 
-
         //传递yuv数据
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
         //把y数据与 0纹理绑定
         //  GL_LUMINANCE: yuv 给这个
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0,GLES20.GL_LUMINANCE,
-                mOutputWidth,mOutputHeight,0,GLES20.GL_LUMINANCE,
-                GLES20.GL_UNSIGNED_BYTE,image.getY());
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0, GLES20.GL_LUMINANCE,
+                mOutputWidth, mOutputHeight,0, GLES20.GL_LUMINANCE,
+                GLES20.GL_UNSIGNED_BYTE, image.getY());
         GLES20.glUniform1i(mSamplerY, 0);
 
         //u数据
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
-        //把y数据与 0纹理绑定
         //  GL_LUMINANCE: yuv 给这个
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0,GLES20.GL_LUMINANCE,
-                mOutputWidth/2,mOutputHeight/2,0,GLES20.GL_LUMINANCE,
-                GLES20.GL_UNSIGNED_BYTE,image.getU());
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0, GLES20.GL_LUMINANCE,
+                mOutputWidth/2,mOutputHeight/2,0, GLES20.GL_LUMINANCE,
+                GLES20.GL_UNSIGNED_BYTE, image.getU());
         GLES20.glUniform1i(mSamplerU, 1);
-
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[2]);
-        //把y数据与 0纹理绑定
         //  GL_LUMINANCE: yuv 给这个
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0,GLES20.GL_LUMINANCE,
-                mOutputWidth/2,mOutputHeight/2,0,GLES20.GL_LUMINANCE,
-                GLES20.GL_UNSIGNED_BYTE,image.getV());
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0, GLES20.GL_LUMINANCE,
+                mOutputWidth/2,mOutputHeight/2,0, GLES20.GL_LUMINANCE,
+                GLES20.GL_UNSIGNED_BYTE, image.getV());
         GLES20.glUniform1i(mSamplerV, 2);
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-
 
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
     }
@@ -130,7 +126,7 @@ public class SoulFilter extends AbstractFilter {
             return;
         }
 
-        //画灵魂
+        //开启混合模式
         GLES20.glEnable(GLES20.GL_BLEND);
         //1：源 灵魂  GL_ONE:画灵魂自己
         //2: 肉体  也是肉体自己
