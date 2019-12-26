@@ -159,8 +159,12 @@ public class VideoCodec {
                 if(index >= 0){
                     //表示获取到一个有效的输出缓冲区，就是能够获取到了解码后的数据
                     ByteBuffer outputBuffer = mDecodeMediaCodec.getOutputBuffer(index);
+                    //三星手机6.0   bufferInfo.size  460800  mOutData.length 460800 渲染到OpenGL上是正常的
+                    //华为 p30      bufferInfo.size  491520  mOutData.length 460800 渲染到OpenGL上是黑白的
+                    // ？？？？？
+                    //Log.d("wangqingbin","bufferInfo.size=="+bufferInfo.size);
+                    //Log.d("wangqingbin","mOutData.length=="+mOutData.length);
                     //作一个容错判断
-                    //p30的手机发现 bufferInfo.size  491520  mOutData.length 460800 不相等
                     if (bufferInfo.size >= mOutData.length){
                         //从输出缓冲区中取出数据 存到outData yuv420
                         outputBuffer.get(mOutData);
