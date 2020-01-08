@@ -31,12 +31,13 @@ public class OpenGLUtils {
             }
         }catch (Exception e){
             e.printStackTrace();
-        }
-        try {
-            is.close();
-            br.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        }finally {
+            try {
+                is.close();
+                br.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return sb.toString();
     }
